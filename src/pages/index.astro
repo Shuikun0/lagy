@@ -1,0 +1,29 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => import.meta.env.PROD ? data.draft !== true : true)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+---
+
+<Base title="Bloge" description="静态博客">
+  <ul class="post-list">
+    {
+      posts.map((post) => (
+        <li>
+          <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+          <p class="meta">
+            {post.data.pubDate.toLocaleDateString('zh-CN', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })}
+            {post.data.draft && <span> · 草稿</span>}
+          </p>
+          <p class="meta">{post.data.description}</p>
+        </li>
+      ))
+    }
+  </ul>
+</Base>

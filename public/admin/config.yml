@@ -1,0 +1,52 @@
+# 使用前请先替换下方 YOUR_* 占位符，并部署 OAuth 中转（见 deploy/decap-oauth-proxy/）
+# GitHub OAuth App 的 Authorization callback URL 必须设为：https://<你的OAuth中转域名>/callback
+
+backend:
+  name: github
+  repo: YOUR_GITHUB_USERNAME/YOUR_REPO_NAME
+  branch: main
+  base_url: https://YOUR_OAUTH_PROXY_HOST
+  auth_endpoint: auth
+
+media_folder: public/images/uploads
+public_folder: /images/uploads
+
+collections:
+  - name: blog
+    label: 文章
+    label_singular: 文章
+    folder: src/content/blog
+    create: true
+    slug: '{{slug}}'
+    format: frontmatter
+    extension: md
+    identifier_field: slug
+    fields:
+      - {
+          label: 'URL 片段（文件名）',
+          name: slug,
+          widget: string,
+          hint: '仅小写字母、数字、连字符，例如 my-first-post',
+          pattern: ['^[a-z0-9]+(?:-[a-z0-9]+)*$', '只允许英文小写、数字与连字符'],
+        }
+      - { label: 标题, name: title, widget: string }
+      - { label: 摘要, name: description, widget: string }
+      - {
+          label: 发布日期,
+          name: pubDate,
+          widget: datetime,
+          date_format: YYYY-MM-DD,
+          time_format: false,
+          picker_utc: false,
+        }
+      - {
+          label: 更新日期,
+          name: updatedDate,
+          widget: datetime,
+          date_format: YYYY-MM-DD,
+          time_format: false,
+          picker_utc: false,
+          required: false,
+        }
+      - { label: 草稿（生产构建不展示）, name: draft, widget: boolean, default: false, required: false }
+      - { label: 正文, name: body, widget: markdown }

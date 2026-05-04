@@ -1,0 +1,35 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const pageTitle = description ? `${title} · Bloge` : title;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    {description && <meta name="description" content={description} />}
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-header">
+        <h1 class="site-title"><a href="/">Bloge</a></h1>
+        <nav class="nav" aria-label="主导航">
+          <a href="/">文章</a>
+          <a href="/rss.xml">RSS</a>
+          <a href="/admin/">后台</a>
+        </nav>
+      </header>
+      <slot />
+    </div>
+  </body>
+</html>
