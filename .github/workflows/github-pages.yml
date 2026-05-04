@@ -1,0 +1,73 @@
+# 一键：push 到 main → 构建并发布到 GitHub Pages
+#
+# 首次在仓库开启：Settings → Pages → Build and deployment → Source 选「GitHub Actions」
+#
+# 用自己的域名（GoDaddy 只改 DNS）：
+#   1. Settings → Secrets and variables → Actions → Variables → 新建 PAGES_CUSTOM_DOMAIN
+#      值填裸域或子域，例如 blog.example.com（不要写 https://）
+#   2. GoDaddy DNS：
+#      - 根域 @：按 GitHub 文档添加 A 记录（185.199.108.153 等四条）
+#      - 或子域：CNAME 指向 Shuikun0.github.io
+#   3. 发布后：Settings → Pages → Custom domain 填同一域名并勾选 Enforce HTTPS
+#
+# 官方 DNS 说明：https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site
+
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Configure site URL for Astro
+        env:
+          DOMAIN: ${{ vars.PAGES_CUSTOM_DOMAIN }}
+        run: |
+          if [ -n "$DOMAIN" ]; then
+            echo "SITE_URL=https://${DOMAIN}" >> "$GITHUB_ENV"
+            echo "ASTRO_ROOT_BASE=1" >> "$GITHUB_ENV"
+          else
+            echo "SITE_URL=https://Shuikun0.github.io" >> "$GITHUB_ENV"
+            echo "ASTRO_BASE=/lagy" >> "$GITHUB_ENV"
+          fi
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: CNAME for custom domain
+        if: ${{ vars.PAGES_CUSTOM_DOMAIN != '' }}
+        run: echo "${{ vars.PAGES_CUSTOM_DOMAIN }}" > dist/CNAME
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
