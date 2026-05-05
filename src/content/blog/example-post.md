@@ -34,4 +34,4 @@ const preview = true;
 
 ## 小结
 
-写完保存后执行 `npm run dev` 预览；确认无误再 `git push`，GitHub Actions 会更新 **`www.dogecoin33.com`** 上的静态页。
+写完保存后执行 `npm run dev` 预览；确认无误再 `git push`，GitHub Actions 会更新你设置的主域名（如 **blog.dogecoin33.com**）上的静态页。
