@@ -7,6 +7,8 @@ const blog = defineCollection({
   schema: z.object({
     title: z.string(),
     description: z.string(),
+    /** 可选：首页列表副标题（不写则不显示） */
+    listLine: z.string().optional(),
     pubDate: z.coerce.date(),
     updatedDate: z.preprocess((val) => (val === '' || val == null ? undefined : val), z.coerce.date().optional()),
     draft: z.boolean().optional(),

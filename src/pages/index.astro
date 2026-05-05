@@ -1,34 +1,39 @@
 ---
 import Base from '../layouts/Base.astro';
+import { SITE_NAME } from '../site';
+import { getPostHref } from '../paths';
 import { getCollection } from 'astro:content';
 
 const posts = (await getCollection('blog', ({ data }) => import.meta.env.PROD ? data.draft !== true : true)).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
+
+const postHref = (id: string) => getPostHref(import.meta.env.BASE_URL, id);
+
+const listDateOpts: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+};
 ---
 
-<Base title="Bloge" description="静态博客">
-  <header class="page-intro">
-    <h2>写作与存档</h2>
-    <p>短文与笔记，排版尽量干净。本地 Markdown 或后台编辑，推送即发布。</p>
-  </header>
-
+<Base title={SITE_NAME} headerVariant="home">
   <ul class="post-list">
     {
       posts.map((post) => (
         <li>
-          <a class="post-card" href={`/blog/${post.id}/`}>
+          <a class="post-card" href={postHref(post.id)}>
             <div class="post-card-inner">
-              <p class="post-card-meta">
-                {post.data.pubDate.toLocaleDateString('zh-CN', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-                {post.data.draft && <span class="post-card-draft">草稿</span>}
-              </p>
-              <p class="post-card-title">{post.data.title}</p>
-              <p class="post-card-excerpt">{post.data.description}</p>
+              <div class="post-card-row">
+                <span class="post-card-title">{post.data.title}</span>
+                <span class="post-card-meta">
+                  <time datetime={post.data.pubDate.toISOString()}>
+                    {post.data.pubDate.toLocaleDateString('zh-CN', listDateOpts)}
+                  </time>
+                  {post.data.draft && <span class="post-card-draft">草稿</span>}
+                </span>
+              </div>
+              {post.data.listLine && <p class="post-card-line">{post.data.listLine}</p>}
             </div>
           </a>
         </li>

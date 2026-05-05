@@ -6,13 +6,20 @@
   "scripts": {
     "dev": "astro dev",
     "dev:root": "ASTRO_ROOT_BASE=1 SITE_URL=http://127.0.0.1:4321 astro dev --host 127.0.0.1",
+    "dev:root:poll": "ASTRO_POLL=1 ASTRO_ROOT_BASE=1 SITE_URL=http://127.0.0.1:4321 astro dev --host 127.0.0.1",
     "build": "astro build",
     "preview": "astro preview",
+    "preview:root": "ASTRO_ROOT_BASE=1 SITE_URL=http://127.0.0.1:4322 astro preview --host 127.0.0.1 --port 4322",
     "push": "bash scripts/push-github.sh",
-    "push:github": "bash scripts/push-github.sh"
+    "push:github": "bash scripts/push-github.sh",
+    "cms:local": "decap-server",
+    "new:post": "node scripts/new-post.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.13",
     "astro": "^5.7.12"
+  },
+  "devDependencies": {
+    "decap-server": "^3.7.0"
   }
 }

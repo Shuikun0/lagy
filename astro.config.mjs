@@ -9,12 +9,23 @@ const site = process.env.SITE_URL ?? 'https://Shuikun0.github.io';
 const useRootBase = process.env.ASTRO_ROOT_BASE === '1';
 
 /** @type {import('astro').AstroUserConfig} */
-const cfg = { site };
+const cfg = {
+  site,
+  devToolbar: { enabled: false },
+};
 
 if (useRootBase) {
   // 自定义域名：站点在域名根路径，不设 base
 } else {
   cfg.base = process.env.ASTRO_BASE || '/lagy';
+}
+
+if (process.env.ASTRO_POLL === '1') {
+  cfg.vite = {
+    server: {
+      watch: { usePolling: true, interval: 300 },
+    },
+  };
 }
 
 export default defineConfig(cfg);

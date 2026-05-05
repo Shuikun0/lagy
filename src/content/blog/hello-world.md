@@ -1,6 +1,6 @@
 ---
 title: 你好，世界
-description: 第一篇示例文章，说明如何在本项目中写作与发布。
+description: 第一篇示例文章，说明如何在项目中写作与发布。
 pubDate: 2026-05-05
 slug: hello-world
 ---
@@ -28,3 +28,4 @@ draft: true               # 可选；生产构建会隐藏草稿
 ```js
 console.log('部署愉快');
 ```
+

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Post</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-light.min.css"
+      id="github-md-css"
+    />
+    <style>
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --bg: #fafafa;
+        --surface: #fff;
+        --border: #e0e0e0;
+        --text: #1f1f1f;
+        --muted: #6e6e6e;
+        --accent-fg: #1f1f1f;
+        --accent-bg: #ebebeb;
+        --focus: #b0b0b0;
+        --danger: #c62828;
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+        --bg: #141414;
+        --surface: #1c1c1c;
+        --border: #333;
+        --text: #e6e6e6;
+        --muted: #9a9a9a;
+        --accent-fg: #f0f0f0;
+        --accent-bg: #2a2a2a;
+        --focus: #666;
+        --danger: #ef9a9a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei',
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        font-size: 15px;
+      }
+      .top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 0.65rem 1rem;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+      }
+      .theme-switch {
+        display: inline-flex;
+        padding: 2px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+      }
+      .theme-switch button {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 13px;
+        padding: 0.35rem 0.65rem;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .theme-switch button[aria-pressed='true'] {
+        background: var(--accent-bg);
+        color: var(--accent-fg);
+      }
+      .theme-switch button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 1rem 1rem 2.5rem;
+      }
+      .editor-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+      }
+      .tabs {
+        display: inline-flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .tabs button {
+        border: none;
+        background: none;
+        font: inherit;
+        font-size: 14px;
+        padding: 0.45rem 0.85rem;
+        margin-bottom: -1px;
+        color: var(--muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+      .tabs button[aria-selected='true'] {
+        color: var(--text);
+        font-weight: 600;
+        border-bottom-color: var(--text);
+      }
+      .tabs button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .panel-write,
+      .panel-preview {
+        min-height: min(62vh, 720px);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .panel-write textarea {
+        display: block;
+        width: 100%;
+        height: min(62vh, 720px);
+        min-height: 280px;
+        border: none;
+        resize: vertical;
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        padding: 1rem 1.1rem;
+        background: var(--surface);
+        color: var(--text);
+      }
+      .panel-write textarea:focus {
+        outline: none;
+      }
+      .panel-preview {
+        overflow: auto;
+        display: none;
+      }
+      .panel-preview.active {
+        display: block;
+      }
+      .panel-write.hidden {
+        display: none;
+      }
+      .panel-write {
+        position: relative;
+      }
+      .panel-write.drag-over {
+        outline: 2px dashed var(--focus);
+        outline-offset: -2px;
+      }
+      .panel-preview .markdown-body {
+        box-sizing: border-box;
+        min-height: min(62vh, 720px);
+        padding: 1.25rem 1.35rem;
+        font-size: 16px;
+      }
+      .meta {
+        margin-top: 1.75rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+      .meta input[type='text'],
+      .meta input[type='date'] {
+        width: 100%;
+        font: inherit;
+        font-size: 14px;
+        padding: 0.5rem 0.65rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--text);
+      }
+      .meta input:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 0;
+      }
+      .meta-inline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem 1.25rem;
+        font-size: 14px;
+        color: var(--text);
+      }
+      .meta-inline label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        cursor: pointer;
+      }
+      .meta-inline input[type='checkbox'] {
+        accent-color: #555;
+      }
+      :root[data-theme='dark'] .meta-inline input[type='checkbox'] {
+        accent-color: #888;
+      }
+      #manualDateWrap {
+        flex: 1;
+        min-width: 160px;
+        max-width: 220px;
+      }
+      #manualDateWrap.hidden {
+        display: none;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+      }
+      .actions button {
+        font: inherit;
+        font-size: 14px;
+        padding: 0.45rem 0.9rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .actions button.primary {
+        background: var(--accent-fg);
+        color: var(--bg);
+        border-color: var(--accent-fg);
+      }
+      :root[data-theme='dark'] .actions button.primary {
+        color: #141414;
+      }
+      .actions button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .err {
+        margin-top: 0.65rem;
+        font-size: 13px;
+        color: var(--danger);
+        display: none;
+      }
+      .err.show {
+        display: block;
+      }
+      .err.ok {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="theme-switch" role="group" aria-label="配色">
+        <button type="button" id="themeLight" aria-pressed="true">日间</button>
+        <button type="button" id="themeDark" aria-pressed="false">夜间</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="editor-head">
+        <div class="tabs" role="tablist" aria-label="正文">
+          <button type="button" role="tab" id="tabWrite" aria-selected="true" aria-controls="panelWrite">编辑</button>
+          <button type="button" role="tab" id="tabPreview" aria-selected="false" aria-controls="panelPreview">
+            预览
+          </button>
+        </div>
+      </div>
+
+      <div id="panelWrite" class="panel-write" role="tabpanel" aria-labelledby="tabWrite">
+        <textarea id="body" placeholder="正文…" spellcheck="false"></textarea>
+      </div>
+      <div id="panelPreview" class="panel-preview" role="tabpanel" aria-labelledby="tabPreview" hidden>
+        <div class="markdown-body" id="previewBody"></div>
+      </div>
+
+      <div class="meta">
+        <input type="text" id="imgPrefix" placeholder="图片 URL 前缀（拖入图片时用）" autocomplete="off" />
+        <input type="text" id="slug" placeholder="slug（小写、数字、连字符）" autocomplete="off" />
+        <input type="text" id="title" placeholder="标题" />
+        <input type="text" id="description" placeholder="描述" />
+        <div class="meta-inline">
+          <label><input type="checkbox" id="autoDate" checked /> 导出用当天</label>
+          <div id="manualDateWrap">
+            <input type="date" id="pubDate" />
+          </div>
+          <label><input type="checkbox" id="draft" checked /> 草稿</label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="primary" id="btnExport">导出</button>
+        <button type="button" id="btnCopy">复制</button>
+      </div>
+      <p class="err" id="err"></p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+    <script>
+      const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+      const THEME_KEY = 'post-editor-theme';
+      const IMG_PREFIX_KEY = 'post-editor-img-prefix';
+      const IMG_PREFIX_DEFAULT = '/lagy/images/';
+      const MD_CSS_LIGHT = 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-light.min.css';
+      const MD_CSS_DARK = 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-dark.min.css';
+
+      function localDateYMD(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+      }
+
+      function yamlScalar(s) {
+        return JSON.stringify(s == null ? '' : String(s));
+      }
+
+      function buildMarkdown(data) {
+        const lines = [
+          '---',
+          'title: ' + yamlScalar(data.title),
+          'description: ' + yamlScalar(data.description),
+          'pubDate: ' + data.pubDate,
+          'slug: ' + data.slug,
+          'draft: ' + (data.draft ? 'true' : 'false'),
+          '---',
+          '',
+          (data.body || '').replace(/\s+$/, ''),
+          '',
+        ];
+        return lines.join('\n');
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        var link = document.getElementById('github-md-css');
+        link.href = theme === 'dark' ? MD_CSS_DARK : MD_CSS_LIGHT;
+        document.getElementById('themeLight').setAttribute('aria-pressed', theme === 'light');
+        document.getElementById('themeDark').setAttribute('aria-pressed', theme === 'dark');
+        try {
+          localStorage.setItem(THEME_KEY, theme);
+        } catch (_) {}
+      }
+
+      function initTheme() {
+        var stored = null;
+        try {
+          stored = localStorage.getItem(THEME_KEY);
+        } catch (_) {}
+        var theme =
+          stored === 'dark' || stored === 'light'
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        applyTheme(theme);
+      }
+
+      document.getElementById('themeLight').addEventListener('click', function () {
+        applyTheme('light');
+      });
+      document.getElementById('themeDark').addEventListener('click', function () {
+        applyTheme('dark');
+      });
+      initTheme();
+
+      var imgPrefixEl = document.getElementById('imgPrefix');
+      function normalizeImgPrefix(p) {
+        var s = (p || '').trim();
+        if (!s) s = IMG_PREFIX_DEFAULT;
+        if (!/^\//.test(s) && !/^[.]{1,2}\//.test(s)) s = '/' + s;
+        return s.replace(/\/*$/, '');
+      }
+      function loadImgPrefix() {
+        try {
+          var v = localStorage.getItem(IMG_PREFIX_KEY);
+          imgPrefixEl.value = v != null && v !== '' ? v : IMG_PREFIX_DEFAULT;
+        } catch (_) {
+          imgPrefixEl.value = IMG_PREFIX_DEFAULT;
+        }
+      }
+      function saveImgPrefix() {
+        try {
+          localStorage.setItem(IMG_PREFIX_KEY, normalizeImgPrefix(imgPrefixEl.value));
+        } catch (_) {}
+      }
+      loadImgPrefix();
+      imgPrefixEl.addEventListener('change', saveImgPrefix);
+      imgPrefixEl.addEventListener('blur', saveImgPrefix);
+
+      function basenameOnly(name) {
+        return String(name || '').replace(/^.*[\\/]/, '');
+      }
+      function altFromFileName(name) {
+        var b = basenameOnly(name);
+        var noExt = b.replace(/\.[^.]+$/, '');
+        return noExt || b;
+      }
+      function imageUrlForMarkdown(fileName) {
+        var base = normalizeImgPrefix(imgPrefixEl.value);
+        var file = basenameOnly(fileName);
+        return base + '/' + encodeURIComponent(file);
+      }
+      function markdownForImageFile(file) {
+        var url = imageUrlForMarkdown(file.name);
+        var alt = altFromFileName(file.name);
+        return '![' + alt + '](' + url + ')';
+      }
+      function insertAtCursor(textarea, insertion) {
+        var start = textarea.selectionStart;
+        var end = textarea.selectionEnd;
+        var before = textarea.value.slice(0, start);
+        var after = textarea.value.slice(end);
+        var lead = before.length && !/\n$/.test(before) ? '\n\n' : '';
+        var block = lead + insertion + (/\n$/.test(insertion) ? '' : '\n');
+        textarea.value = before + block + after;
+        var caret = before.length + block.length;
+        textarea.selectionStart = textarea.selectionEnd = caret;
+        textarea.focus();
+      }
+      function insertImagesFromFileList(files) {
+        var list = [];
+        for (var i = 0; i < files.length; i++) {
+          if (files[i].type && files[i].type.indexOf('image/') === 0) list.push(files[i]);
+        }
+        if (!list.length) return;
+        setTab('write');
+        var md = list.map(markdownForImageFile).join('\n\n');
+        insertAtCursor(bodyEl, md);
+      }
+
+      var autoDateEl = document.getElementById('autoDate');
+      var manualDateWrap = document.getElementById('manualDateWrap');
+      var pubDateEl = document.getElementById('pubDate');
+
+      function syncDateUI() {
+        var auto = autoDateEl.checked;
+        manualDateWrap.classList.toggle('hidden', auto);
+        if (auto) pubDateEl.removeAttribute('required');
+        else {
+          if (!pubDateEl.value) pubDateEl.value = localDateYMD(new Date());
+          pubDateEl.setAttribute('required', 'required');
+        }
+      }
+      autoDateEl.addEventListener('change', syncDateUI);
+      syncDateUI();
+
+      function getPubDateForExport() {
+        if (autoDateEl.checked) return localDateYMD(new Date());
+        return pubDateEl.value;
+      }
+
+      var tabWrite = document.getElementById('tabWrite');
+      var tabPreview = document.getElementById('tabPreview');
+      var panelWrite = document.getElementById('panelWrite');
+      var panelPreview = document.getElementById('panelPreview');
+      var bodyEl = document.getElementById('body');
+      var previewBody = document.getElementById('previewBody');
+
+      function renderPreview() {
+        var raw = bodyEl.value || '';
+        function finish(html) {
+          previewBody.innerHTML =
+            typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(html || '') : html || '';
+        }
+        if (typeof marked === 'undefined') {
+          finish('');
+          return;
+        }
+        try {
+          var out = marked.parse(raw, { async: false });
+          if (out != null && typeof out.then === 'function') {
+            out.then(finish).catch(function () {
+              finish('');
+            });
+          } else {
+            finish(typeof out === 'string' ? out : '');
+          }
+        } catch (_) {
+          finish('');
+        }
+      }
+
+      function setTab(which) {
+        var isWrite = which === 'write';
+        tabWrite.setAttribute('aria-selected', isWrite);
+        tabPreview.setAttribute('aria-selected', !isWrite);
+        panelWrite.classList.toggle('hidden', !isWrite);
+        panelPreview.classList.toggle('active', !isWrite);
+        panelPreview.hidden = isWrite;
+        if (!isWrite) renderPreview();
+      }
+
+      tabWrite.addEventListener('click', function () {
+        setTab('write');
+      });
+      tabPreview.addEventListener('click', function () {
+        setTab('preview');
+      });
+
+      ;(function bindImageDrop() {
+        var panel = document.getElementById('panelWrite');
+        function setDragOver(on) {
+          panel.classList.toggle('drag-over', on);
+        }
+        function hasFilePayload(dt) {
+          return dt && dt.types && dt.types.indexOf('Files') !== -1;
+        }
+        panel.addEventListener('dragover', function (e) {
+          if (!hasFilePayload(e.dataTransfer)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          setDragOver(true);
+        });
+        panel.addEventListener('dragleave', function (e) {
+          var rt = e.relatedTarget;
+          if (rt && panel.contains(rt)) return;
+          setDragOver(false);
+        });
+        panel.addEventListener('drop', function (e) {
+          setDragOver(false);
+          if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+          e.preventDefault();
+          insertImagesFromFileList(e.dataTransfer.files);
+        });
+      })();
+
+      bodyEl.addEventListener('paste', function (e) {
+        var items = e.clipboardData && e.clipboardData.items;
+        if (!items || !items.length) return;
+        var files = [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+            var f = items[i].getAsFile();
+            if (f) files.push(f);
+          }
+        }
+        if (!files.length) return;
+        e.preventDefault();
+        insertImagesFromFileList(files);
+      });
+
+      function validate() {
+        var err = document.getElementById('err');
+        err.classList.remove('show', 'ok');
+        err.textContent = '';
+
+        var slug = document.getElementById('slug').value.trim();
+        var title = document.getElementById('title').value.trim();
+
+        if (!slug) {
+          err.textContent = '填写 slug';
+          err.classList.add('show');
+          return null;
+        }
+        if (!SLUG_RE.test(slug)) {
+          err.textContent = 'slug 仅允许小写字母、数字、连字符';
+          err.classList.add('show');
+          return null;
+        }
+        if (!title) {
+          err.textContent = '填写标题';
+          err.classList.add('show');
+          return null;
+        }
+
+        var pubDate = getPubDateForExport();
+        if (!pubDate || !/^\d{4}-\d{2}-\d{2}$/.test(pubDate)) {
+          err.textContent = '日期无效';
+          err.classList.add('show');
+          return null;
+        }
+
+        return {
+          slug: slug,
+          title: title,
+          description: document.getElementById('description').value.trim(),
+          pubDate: pubDate,
+          draft: document.getElementById('draft').checked,
+          body: bodyEl.value,
+        };
+      }
+
+      function triggerDownload(filename, text) {
+        var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      document.getElementById('btnExport').addEventListener('click', function () {
+        var data = validate();
+        if (!data) return;
+        triggerDownload(data.slug + '.md', buildMarkdown(data));
+      });
+
+      document.getElementById('btnCopy').addEventListener('click', async function () {
+        var data = validate();
+        if (!data) return;
+        try {
+          await navigator.clipboard.writeText(buildMarkdown(data));
+          var err = document.getElementById('err');
+          err.textContent = '已复制';
+          err.classList.add('show', 'ok');
+        } catch {
+          var err = document.getElementById('err');
+          err.textContent = '复制失败';
+          err.classList.add('show');
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,5 +1,13 @@
 # 使用前请先替换下方 YOUR_* 占位符，并部署 OAuth 中转（见 deploy/decap-oauth-proxy/）
 # GitHub OAuth App 的 Authorization callback URL 必须设为：https://<你的OAuth中转域名>/callback
+#
+# 本地写作（最省事）：npm run dev 时另开终端运行 npm run cms:local，浏览器打开 /admin/
+# （或用项目里的 Bloge-Dev.command，会自动拉起 cms:local）
+
+local_backend:
+  allowed_hosts:
+    - localhost
+    - '127.0.0.1'
 
 backend:
   name: github
@@ -31,6 +39,13 @@ collections:
         }
       - { label: 标题, name: title, widget: string }
       - { label: 摘要, name: description, widget: string }
+      - {
+          label: '首页列表副标题（可选）',
+          name: listLine,
+          widget: string,
+          required: false,
+          hint: '不写则首页只显示标题；写一句会在标题下多一行小字',
+        }
       - {
           label: 发布日期,
           name: pubDate,

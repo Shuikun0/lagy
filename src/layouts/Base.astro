@@ -1,23 +1,44 @@
 ---
 import '../styles/global.css';
+import { SITE_NAME } from '../site';
+import { getHomeHref } from '../paths';
 
 interface Props {
   title: string;
   description?: string;
+  /** 首页：动画站点名；文章页：返回 + 标题 + 主题按钮同一行 */
+  headerVariant?: 'home' | 'article';
+  /** `headerVariant="article"` 时传入，显示在顶栏中间 */
+  articleTitle?: string;
 }
 
-const { title, description } = Astro.props;
-const pageTitle = description ? `${title} · Bloge` : title;
+const siteName = SITE_NAME;
+const siteChars = [...siteName];
+const staggerMs = 72;
+
+const { title, description, headerVariant = 'home', articleTitle } = Astro.props;
+const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
+const homeHref = getHomeHref(import.meta.env.BASE_URL);
+const isHome = headerVariant === 'home';
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     {description && <meta name="description" content={description} />}
     <title>{pageTitle}</title>
+    <script is:inline>
+      try {
+        var _t = localStorage.getItem('theme');
+        if (_t !== 'light' && _t !== 'dark') _t = 'dark';
+        document.documentElement.dataset.theme = _t;
+      } catch (e) {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -27,21 +48,121 @@ const pageTitle = description ? `${title} · Bloge` : title;
   </head>
   <body>
     <div class="wrap">
-      <header class="site-header">
-        <div class="site-brand">
-          <h1 class="site-title"><a href="/">Bloge</a></h1>
-          <p class="site-tagline">Minimal notes · 静态发布</p>
-        </div>
-        <nav class="nav" aria-label="主导航">
-          <a href="/">文章</a>
-          <a href="/rss.xml">RSS</a>
-          <a href="/admin/">后台</a>
-        </nav>
+      <header class:list={['site-header', isHome ? 'site-header--home' : 'site-header--article']}>
+        {
+          isHome ? (
+            <>
+              <div class="site-header-primary">
+                <h1 class="site-title">
+                  <a class="site-title-link" href={homeHref} aria-label={siteName}>
+                    <span class="site-title-inner" aria-hidden="true">
+                      {siteChars.map((ch, i) => (
+                        <span class="site-title-char" style={`--site-title-d: ${i * staggerMs}ms`}>
+                          {ch}
+                        </span>
+                      ))}
+                    </span>
+                  </a>
+                </h1>
+              </div>
+              <button type="button" class="theme-toggle" aria-label="切换浅色或深色模式">
+                <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
+                  <path
+                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <a class="back-home" href={homeHref} aria-label="返回首页">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M14 6l-6 6 6 6"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </a>
+              <h1 class="article-header-title">{articleTitle}</h1>
+              <button type="button" class="theme-toggle" aria-label="切换浅色或深色模式">
+                <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
+                  <path
+                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </>
+          )
+        }
       </header>
       <slot />
-      <footer class="site-footer">
-        Built with <a href="https://astro.build">Astro</a>
-      </footer>
     </div>
+    {
+      isHome && (
+        <noscript>
+          <style is:inline>
+            .site-title-char {
+              opacity: 1 !important;
+              filter: none !important;
+              -webkit-filter: none !important;
+            }
+          </style>
+        </noscript>
+      )
+    }
+    {
+      isHome && (
+        <script is:inline>
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              document.documentElement.classList.add('site-title-play');
+            });
+          });
+        </script>
+      )
+    }
+    <script is:inline>
+      document.querySelectorAll('.theme-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var root = document.documentElement;
+          var next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+          root.dataset.theme = next;
+          try {
+            localStorage.setItem('theme', next);
+          } catch (e) {}
+        });
+      });
+    </script>
   </body>
 </html>
