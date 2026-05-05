@@ -21,9 +21,11 @@ const dateLabel = post.data.pubDate.toLocaleDateString('zh-CN', {
 ---
 
 <Base title={post.data.title} description={post.data.description}>
-  <article class="prose">
-    <h1>{post.data.title}</h1>
-    <p class="meta">{dateLabel}</p>
+  <article class="article-shell prose">
+    <header class="article-head">
+      <h1>{post.data.title}</h1>
+      <p class="article-date">{dateLabel}</p>
+    </header>
     <Content />
   </article>
 </Base>

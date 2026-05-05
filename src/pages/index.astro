@@ -8,20 +8,29 @@ const posts = (await getCollection('blog', ({ data }) => import.meta.env.PROD ? 
 ---
 
 <Base title="Bloge" description="静态博客">
+  <header class="page-intro">
+    <h2>写作与存档</h2>
+    <p>短文与笔记，排版尽量干净。本地 Markdown 或后台编辑，推送即发布。</p>
+  </header>
+
   <ul class="post-list">
     {
       posts.map((post) => (
         <li>
-          <a href={`/blog/${post.id}/`}>{post.data.title}</a>
-          <p class="meta">
-            {post.data.pubDate.toLocaleDateString('zh-CN', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-            })}
-            {post.data.draft && <span> · 草稿</span>}
-          </p>
-          <p class="meta">{post.data.description}</p>
+          <a class="post-card" href={`/blog/${post.id}/`}>
+            <div class="post-card-inner">
+              <p class="post-card-meta">
+                {post.data.pubDate.toLocaleDateString('zh-CN', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                {post.data.draft && <span class="post-card-draft">草稿</span>}
+              </p>
+              <p class="post-card-title">{post.data.title}</p>
+              <p class="post-card-excerpt">{post.data.description}</p>
+            </div>
+          </a>
         </li>
       ))
     }

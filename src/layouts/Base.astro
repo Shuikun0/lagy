@@ -18,11 +18,20 @@ const pageTitle = description ? `${title} · Bloge` : title;
     <meta name="generator" content={Astro.generator} />
     {description && <meta name="description" content={description} />}
     <title>{pageTitle}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div class="wrap">
       <header class="site-header">
-        <h1 class="site-title"><a href="/">Bloge</a></h1>
+        <div class="site-brand">
+          <h1 class="site-title"><a href="/">Bloge</a></h1>
+          <p class="site-tagline">Minimal notes · 静态发布</p>
+        </div>
         <nav class="nav" aria-label="主导航">
           <a href="/">文章</a>
           <a href="/rss.xml">RSS</a>
@@ -30,6 +39,9 @@ const pageTitle = description ? `${title} · Bloge` : title;
         </nav>
       </header>
       <slot />
+      <footer class="site-footer">
+        Built with <a href="https://astro.build">Astro</a>
+      </footer>
     </div>
   </body>
 </html>
