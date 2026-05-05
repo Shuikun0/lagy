@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "dev:root": "ASTRO_ROOT_BASE=1 SITE_URL=http://127.0.0.1:4321 astro dev --host 127.0.0.1",
     "build": "astro build",
     "preview": "astro preview",
     "push": "bash scripts/push-github.sh",
