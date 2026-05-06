@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
+import { SITE_TAB_TITLE } from '../../site';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
@@ -19,12 +20,23 @@ const enc =
   typeof post.data.cipherIv === 'string' &&
   typeof post.data.cipherSalt === 'string';
 
+/** 与 public/js/article-crypto.js 中 PBKDF2_ITERATIONS 保持一致 */
+const defaultCipherIterations = 600000;
+
 const encPayloadJson = enc
   ? JSON.stringify({
       cipherText: post.data.cipherText,
       cipherIv: post.data.cipherIv,
       cipherSalt: post.data.cipherSalt,
+      cipherIterations: post.data.cipherIterations ?? defaultCipherIterations,
     })
+  : '';
+
+const encMetaJson = enc
+  ? JSON.stringify({
+      decryptedTitle: (post.data.decryptedTitle ?? '').trim(),
+      tabSuffix: SITE_TAB_TITLE,
+    }).replace(/</g, '\\u003c')
   : '';
 
 const hint = enc ? (post.data.passwordHint ?? '').trim() : '';
@@ -41,23 +53,26 @@ const base = import.meta.env.BASE_URL || '/';
               <div class="enc-gate-hint prose" id="enc-hint-rendered" data-hint-encoded={encodeURIComponent(hint)} />
             ) : null}
             <form class="enc-gate-form" id="enc-form" autocomplete="off">
-              <input
-                type="text"
-                id="enc-pass"
-                name="password"
-                class="enc-gate-input"
-                autocomplete="off"
-                spellcheck="false"
-                inputmode="text"
-                aria-label="输入口令以解锁全文"
-              />
-              <button type="submit" class="enc-gate-submit">
-                解锁
-              </button>
+              <div id="enc-gate-shake-root" class="enc-gate-shake-root">
+                <div id="enc-pass-wrap" class="enc-gate-input-wrap">
+                  <input
+                    type="text"
+                    id="enc-pass"
+                    name="password"
+                    class="enc-gate-input"
+                    autocomplete="off"
+                    spellcheck="false"
+                    inputmode="text"
+                    placeholder="在这里输入暗号解锁文章"
+                    aria-label="输入口令以解锁全文；按 Enter 解锁"
+                  />
+                </div>
+                <p class="enc-gate-err" id="enc-err" role="status" aria-live="polite" aria-hidden="true"></p>
+              </div>
             </form>
-            <p class="enc-gate-err" id="enc-err" hidden />
           </div>
           <div class="enc-body prose" id="enc-body" hidden />
+          <script type="application/json" id="enc-meta" set:html={encMetaJson} />
           <script type="application/json" id="enc-payload" set:html={encPayloadJson} />
           <script is:inline src={`${base}js/article-crypto.js`} />
           <script is:inline src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" />
@@ -99,29 +114,94 @@ const base = import.meta.env.BASE_URL || '/';
               renderEncryptedHint();
 
               var payloadEl = document.getElementById('enc-payload');
+              var metaEl = document.getElementById('enc-meta');
               var form = document.getElementById('enc-form');
               if (!payloadEl || !form || !window.articleCrypto) return;
               var payload = JSON.parse(payloadEl.textContent);
+              var encMeta = {};
+              try {
+                encMeta = metaEl && metaEl.textContent ? JSON.parse(metaEl.textContent) : {};
+              } catch (e) {
+                encMeta = {};
+              }
+              function applyDecryptedTitle() {
+                var t = encMeta.decryptedTitle != null ? String(encMeta.decryptedTitle).trim() : '';
+                if (!t) return;
+                var h = document.querySelector('.article-header-title');
+                if (h) h.textContent = t;
+                var suf = encMeta.tabSuffix != null ? String(encMeta.tabSuffix) : '';
+                document.title = suf ? t + ' · ' + suf : t;
+              }
               function showDecrypted(rawHtml) {
+                hideEncErrInstant();
                 var body = document.getElementById('enc-body');
                 body.innerHTML =
                   typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml || '') : rawHtml || '';
                 document.getElementById('enc-gate').hidden = true;
                 body.hidden = false;
+                applyDecryptedTitle();
+              }
+              var errEl = document.getElementById('enc-err');
+              var shakeRoot = document.getElementById('enc-gate-shake-root');
+              var errFadeTimer = null;
+              function hideEncErrInstant() {
+                clearTimeout(errFadeTimer);
+                errFadeTimer = null;
+                errEl.removeEventListener('transitionend', errFadeOnEnd);
+                errEl.classList.remove('is-visible');
+                errEl.style.transition = 'none';
+                errEl.textContent = '';
+                errEl.setAttribute('aria-hidden', 'true');
+                void errEl.offsetWidth;
+                errEl.style.transition = '';
+              }
+              function errFadeOnEnd(ev) {
+                if (ev.propertyName !== 'opacity') return;
+                errEl.removeEventListener('transitionend', errFadeOnEnd);
+                errEl.textContent = '';
+                errEl.setAttribute('aria-hidden', 'true');
+              }
+              function showEncErr(msg) {
+                hideEncErrInstant();
+                errEl.textContent = msg;
+                errEl.setAttribute('aria-hidden', 'false');
+                requestAnimationFrame(function () {
+                  errEl.classList.add('is-visible');
+                });
+                shakeEncCluster();
+                errFadeTimer = setTimeout(function () {
+                  errFadeTimer = null;
+                  errEl.classList.remove('is-visible');
+                  errEl.addEventListener('transitionend', errFadeOnEnd);
+                }, 2400);
+              }
+              function shakeEncCluster() {
+                if (!shakeRoot) return;
+                shakeRoot.classList.remove('enc-gate-shake');
+                shakeRoot.offsetWidth;
+                shakeRoot.classList.add('enc-gate-shake');
+                function onEnd() {
+                  shakeRoot.removeEventListener('animationend', onEnd);
+                  shakeRoot.classList.remove('enc-gate-shake');
+                }
+                shakeRoot.addEventListener('animationend', onEnd);
               }
               form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                var errEl = document.getElementById('enc-err');
-                errEl.hidden = true;
-                errEl.textContent = '';
+                hideEncErrInstant();
                 var pass = document.getElementById('enc-pass').value;
                 if (!pass) {
-                  errEl.textContent = '请输入暗号';
-                  errEl.hidden = false;
+                  showEncErr('请输入暗号');
                   return;
                 }
                 window.articleCrypto
-                  .decrypt(payload.cipherText, payload.cipherIv, payload.cipherSalt, pass)
+                  .decrypt(
+                    payload.cipherText,
+                    payload.cipherIv,
+                    payload.cipherSalt,
+                    pass,
+                    payload.cipherIterations,
+                  )
                   .then(function (md) {
                     var out =
                       typeof marked !== 'undefined' ? marked.parse(md, { async: false }) : '';
@@ -133,8 +213,7 @@ const base = import.meta.env.BASE_URL || '/';
                     showDecrypted(typeof out === 'string' ? out : '');
                   })
                   .catch(function () {
-                    errEl.textContent = '暗号不正确';
-                    errEl.hidden = false;
+                    showEncErr('暗号不正确');
                   });
               });
             })();

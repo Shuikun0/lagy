@@ -9,6 +9,16 @@
   --measure-wide: 48rem;
   --tracking-tight: -0.02em;
   --blog-title-size: clamp(1.14rem, 3.4vw, 1.58rem);
+  /** 顶栏工具按钮尺寸（与占位一致，保证主页/文章主题按钮像素对齐） */
+  --toolbar-hit: 2.25rem;
+  /** 顶栏轨道固定高度 ≥ logo 最大高度，两侧垂直居中一致 */
+  --site-header-bar-height: 3.875rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --site-header-bar-height: 4rem;
+  }
 }
 
 :root[data-theme='light'] {
@@ -51,11 +61,25 @@ html {
   font-size: 17px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-gutter: stable;
+  /** macOS 触控板滚到顶/底时减弱页面级橡皮筋（Safari / Chromium 均支持 overscroll-behavior） */
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overscroll-behavior-y: none;
+}
+
+/**
+ * ClientRouter 软路由会触发默认 root 视图过渡（整页快照 cross-fade），顶栏 logo 会随之看起来「淡入淡出」。
+ * 关掉 root 动画即可保留软路由、去掉顶栏参与过渡；不认该伪类的浏览器会忽略本段。
+ */
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none !important;
 }
 
 body.page-home .wrap {
@@ -83,37 +107,56 @@ a:hover {
   padding: 3.85rem 1.5rem 5rem;
 }
 
-/* —— Header —— */
+/* —— Header：固定轨道高度，主页/文章右侧均为主题按钮 —— */
 .site-header {
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2.15rem;
-}
-
-.site-header--home {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding-bottom: 1.1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  box-sizing: border-box;
+  min-height: var(--site-header-bar-height);
+  margin-bottom: 1.65rem;
 }
 
-.site-header--article {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding-bottom: 0;
-  border-bottom: none;
-  margin-bottom: 2.85rem;
+body.page-home .site-header {
+  margin-bottom: 2.35rem;
+}
+
+/** 主页列表 / 文章标题+正文：每次进入页面时轻微显现 */
+@keyframes page-main-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-main {
+  opacity: 0;
+  animation: page-main-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+body.page-home .page-main {
+  animation-delay: 0.07s;
+}
+
+.article-title-wrap {
+  max-width: var(--measure);
+  margin: 1.35rem auto 2.45rem;
+  padding: 0;
 }
 
 .site-header-primary {
   display: flex;
   align-items: center;
+  gap: 0.72rem;
   min-width: 0;
   flex: 1;
-  min-height: 2.25rem;
+  box-sizing: border-box;
+  min-height: var(--site-header-bar-height);
 }
 
 .site-header-toolbar {
@@ -121,6 +164,8 @@ a:hover {
   align-items: center;
   gap: 0.2rem;
   flex-shrink: 0;
+  box-sizing: border-box;
+  min-height: var(--site-header-bar-height);
 }
 
 .toolbar-btn {
@@ -128,14 +173,15 @@ a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: var(--toolbar-hit);
+  height: var(--toolbar-hit);
   padding: 0;
   margin: 0;
   border: none;
+  line-height: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 52%, var(--bg));
   cursor: pointer;
   flex-shrink: 0;
   transition:
@@ -144,28 +190,29 @@ a:hover {
 }
 
 .toolbar-btn:hover {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: color-mix(in srgb, var(--muted) 78%, var(--fg));
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
 }
 
 a.toolbar-btn.home-btn {
   text-decoration: none;
   border-bottom: none;
-  color: var(--muted);
 }
 
-a.toolbar-btn.home-btn:hover {
-  color: var(--fg);
-  border-bottom: none;
+.toolbar-back-icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  display: block;
+  flex-shrink: 0;
 }
 
 .toolbar-btn svg {
   display: block;
+  flex-shrink: 0;
 }
 
 .article-header-title {
   margin: 0;
-  flex: 1;
   min-width: 0;
   font-family: var(--font-blog-name);
   font-size: var(--blog-title-size);
@@ -180,125 +227,82 @@ a.toolbar-btn.home-btn:hover {
   overflow: hidden;
 }
 
-.site-title {
-  margin: 0;
-  font-family: var(--font-blog-name);
-  font-size: var(--blog-title-size);
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  line-height: 1.22;
-  color: var(--fg);
-}
-
-.site-title-cluster {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.7rem;
-}
-
-:root[data-theme='dark'] .site-title-link {
-  text-shadow: 0 0 42px color-mix(in srgb, var(--fg) 7%, transparent);
-}
-
-.site-title-link {
-  display: inline-flex;
-  align-items: center;
-  color: inherit;
-  border-bottom: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.site-title-link:hover {
-  color: color-mix(in srgb, var(--fg) 82%, var(--muted));
-}
-
 .theme-toggle-icon {
   display: none;
 }
 
+/* 显示当前主题：夜间 → 月亮，日间 → 太阳 */
 [data-theme='dark'] .theme-toggle-icon--sun {
-  display: block;
+  display: none;
 }
 
 [data-theme='dark'] .theme-toggle-icon--moon {
-  display: none;
+  display: block;
 }
 
 [data-theme='light'] .theme-toggle-icon--sun {
-  display: none;
+  display: block;
 }
 
 [data-theme='light'] .theme-toggle-icon--moon {
-  display: block;
+  display: none;
 }
 
-/* 首页排序 */
-.sort-dropdown {
-  position: relative;
-  display: inline-flex;
-}
-
-.sort-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
-  min-width: 9.75rem;
-  padding: 0.3rem 0;
+.home-brand-heading {
   margin: 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--fg) 10%, transparent);
+  line-height: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.sort-menu-item {
-  display: block;
-  width: 100%;
-  padding: 0.44rem 0.9rem;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 0.8125rem;
-  text-align: left;
-  cursor: pointer;
-  color: var(--fg-soft);
-}
-
-.sort-menu-item:hover {
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
-  color: var(--fg);
-}
-
-.sort-menu-item[aria-checked='true'] {
-  color: var(--fg);
-  font-weight: 500;
-}
-
-.site-title-inner {
+.home-logo-link {
   display: inline-flex;
-  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: none;
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.site-title-char {
-  --site-title-dur: 1.05s;
-  display: inline-block;
-  opacity: 0;
-  filter: blur(18px);
-  -webkit-filter: blur(18px);
-  transition:
-    opacity var(--site-title-dur) cubic-bezier(0.18, 0.82, 0.22, 1) var(--site-title-d, 0s),
-    filter var(--site-title-dur) cubic-bezier(0.18, 0.82, 0.22, 1) var(--site-title-d, 0s),
-    -webkit-filter var(--site-title-dur) cubic-bezier(0.18, 0.82, 0.22, 1) var(--site-title-d, 0s);
-  will-change: opacity, filter;
-}
-
-html.site-title-play .site-title-char {
+.home-logo-link:active {
   opacity: 1;
-  filter: blur(0.35px);
-  -webkit-filter: blur(0.35px);
+}
+
+.home-logo-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* —— Home logo：仅品牌图时略放大 —— */
+.home-logo {
+  display: block;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  width: auto;
+  height: max(2.85rem, calc(var(--blog-title-size) * 1.72));
+  max-height: min(3.85rem, calc(var(--blog-title-size) * 1.88));
+  object-fit: contain;
+}
+
+@media (min-width: 640px) {
+  .home-logo {
+    height: max(3.05rem, calc(var(--blog-title-size) * 1.82));
+    max-height: min(4rem, calc(var(--blog-title-size) * 1.95));
+  }
+}
+
+/* 深色/浅色下压成单色，接近 var(--fg)；彩色 logo 请去掉 home-logo--match-fg */
+:root[data-theme='light'] .home-logo--match-fg {
+  filter: brightness(0);
+}
+
+:root[data-theme='dark'] .home-logo--match-fg {
+  filter: brightness(0) invert(1);
 }
 
 /* —— Home post list —— */
@@ -339,6 +343,16 @@ html.site-title-play .site-title-char {
 .post-card:focus-visible {
   outline: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
   outline-offset: 2px;
+}
+
+.post-card.post-card--kbd-focus {
+  color: inherit;
+  border-bottom-color: transparent;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+
+.post-card.post-card--kbd-focus .post-card-title {
+  color: var(--fg);
 }
 
 .post-card-inner {
@@ -529,14 +543,58 @@ article.prose img {
 
 .enc-gate-form {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.65rem;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+}
+
+/* 弹簧式横向晃动（出错反馈）；不写在 prefers-reduced-motion 内以免被本站其它样式连带关掉 */
+@keyframes enc-gate-shake {
+  0% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(-10px);
+  }
+  36% {
+    transform: translateX(8px);
+  }
+  54% {
+    transform: translateX(-5px);
+  }
+  72% {
+    transform: translateX(3px);
+  }
+  90% {
+    transform: translateX(-1px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.enc-gate-shake-root {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: calc(100% - 1.5rem);
+  max-width: calc(100% - 1.5rem);
+  transform: translateZ(0);
+}
+
+.enc-gate-shake-root.enc-gate-shake {
+  animation: enc-gate-shake 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.enc-gate-input-wrap {
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .enc-gate-input {
-  flex: 1;
-  min-width: 12rem;
+  box-sizing: border-box;
+  width: 100%;
   padding: 0.5rem 0.65rem;
   font: inherit;
   font-size: 0.95rem;
@@ -546,28 +604,26 @@ article.prose img {
   color: var(--fg);
 }
 
-.enc-gate-submit {
-  padding: 0.5rem 1rem;
-  font: inherit;
-  font-size: 0.9rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--accent-soft);
-  color: var(--accent);
-  cursor: pointer;
-}
-
-.enc-gate-submit:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-}
-
 .enc-gate-err {
-  margin: 0.75rem 0 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  text-align: center;
   font-size: 0.88rem;
-  color: #b3261e;
+  color: var(--muted);
+  font-weight: 400;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.48s ease,
+    visibility 0.48s ease,
+    margin-top 0.35s ease;
 }
 
-:root[data-theme='dark'] .enc-gate-err {
-  color: #ef9a9a;
+.enc-gate-err.is-visible {
+  margin-top: 0.65rem;
+  opacity: 1;
+  visibility: visible;
 }
 

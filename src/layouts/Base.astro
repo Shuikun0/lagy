@@ -1,7 +1,8 @@
 ---
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 import { SITE_NAME, SITE_TAB_TITLE } from '../site';
-import { getHomeHref } from '../paths';
+import { getHomeHref, getPublicHref } from '../paths';
 
 interface Props {
   title: string;
@@ -11,13 +12,13 @@ interface Props {
 }
 
 const siteName = SITE_NAME;
-const siteChars = [...siteName];
-const staggerMs = 72;
 
 const { title, description, headerVariant = 'home', articleTitle } = Astro.props;
 const pageTitle = title === siteName ? SITE_TAB_TITLE : `${title} · ${SITE_TAB_TITLE}`;
-const homeHref = getHomeHref(import.meta.env.BASE_URL);
-const faviconBase = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+const baseUrl = import.meta.env.BASE_URL;
+const homeHref = getHomeHref(baseUrl);
+const homeLogoSrc = getPublicHref(baseUrl, 'images/homelogo.png');
+const faviconBase = (baseUrl || '/').replace(/\/?$/, '/');
 /** public/favicon.png：在 macOS 上用 Apple Color Emoji 离线渲染的 📟（脚本 scripts/render-ios-favicon.swift） */
 const faviconHref = `${faviconBase}favicon.png`;
 const isHome = headerVariant === 'home';
@@ -31,7 +32,7 @@ const isHome = headerVariant === 'home';
     <meta name="generator" content={Astro.generator} />
     {description && <meta name="description" content={description} />}
     <title>{pageTitle}</title>
-    <link rel="icon" href={faviconHref} sizes="128x128" type="image/png" />
+    <link rel="icon" href={faviconHref} sizes="192x192" type="image/png" />
     <script is:inline>
       try {
         var _t = localStorage.getItem('theme');
@@ -47,139 +48,80 @@ const isHome = headerVariant === 'home';
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600&display=swap"
       rel="stylesheet"
     />
+    <ClientRouter />
   </head>
   <body class:list={[{ 'page-home': isHome, 'page-article': !isHome }]}>
     <div class="wrap">
-      <header class:list={['site-header', isHome ? 'site-header--home' : 'site-header--article']}>
-        {
-          isHome ? (
-            <>
-              <div class="site-header-primary">
-                <h1 class="site-title">
-                  <span class="site-title-cluster">
-                    <a class="site-title-link" href={homeHref} aria-label={siteName}>
-                      <span class="site-title-inner" aria-hidden="true">
-                        {siteChars.map((ch, i) => (
-                          <span class="site-title-char" style={`--site-title-d: ${i * staggerMs}ms`}>
-                            {ch}
-                          </span>
-                        ))}
-                      </span>
-                    </a>
-                  </span>
-                </h1>
-              </div>
-              <div class="site-header-toolbar">
-                <slot name="header-tools" />
-                <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
-                  <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
-                    <path
-                      d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      fill="none"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div class="site-header-primary">
-                <h1 class="article-header-title">{articleTitle}</h1>
-              </div>
-              <div class="site-header-toolbar">
-                <a class="toolbar-btn home-btn" href={homeHref} aria-label="返回首页">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M9 22V12h6v10"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
+      <header class="site-header">
+        <div class="site-header-primary">
+          {
+            isHome ? (
+              <h1 class="home-brand-heading">
+                <a class="home-logo-link" href={homeHref}>
+                  <img class="home-logo home-logo--match-fg" src={homeLogoSrc} alt={siteName} decoding="async" draggable={false} />
                 </a>
-                <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
-                  <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
-                    <path
-                      d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      fill="none"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </>
-          )
-        }
+              </h1>
+            ) : (
+              <a class="toolbar-btn home-btn" href={homeHref} aria-label={`返回${siteName}`}>
+                <!-- 左箭头 + 横杠；几何关于 (12,12) 对称，略大于 20×20 主题图标 -->
+                <svg class="toolbar-back-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M17 12H7m0 0 5-5M7 12l5 5"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </a>
+            )
+          }
+        </div>
+        <div class="site-header-toolbar">
+          <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
+            <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
+              <path
+                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                stroke="currentColor"
+                stroke-width="1.75"
+                fill="none"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </header>
-      <slot />
+      <div class="page-main">
+        {
+          !isHome && articleTitle ? (
+            <div class="article-title-wrap">
+              <h1 class="article-header-title">{articleTitle}</h1>
+            </div>
+          ) : null
+        }
+        <slot />
+      </div>
     </div>
-    {
-      isHome && (
-        <noscript>
-          <style is:inline>
-            .site-title-char {
-              opacity: 1 !important;
-              filter: none !important;
-              -webkit-filter: none !important;
-            }
-          </style>
-        </noscript>
-      )
-    }
-    {
-      isHome && (
-        <script is:inline>
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              document.documentElement.classList.add('site-title-play');
-            });
-          });
-        </script>
-      )
-    }
     <script is:inline>
-      document.querySelectorAll('.theme-toggle').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var root = document.documentElement;
-          var next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-          root.dataset.theme = next;
-          try {
-            localStorage.setItem('theme', next);
-          } catch (e) {}
-        });
+      document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest && e.target.closest('.theme-toggle');
+        if (!btn) return;
+        var root = document.documentElement;
+        var next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try {
+          localStorage.setItem('theme', next);
+        } catch (err) {}
       });
     </script>
   </body>

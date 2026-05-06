@@ -18,9 +18,13 @@ const blog = defineCollection({
     encrypted: z.boolean().optional(),
     /** 可选密码提示，展示在解锁表单旁 */
     passwordHint: z.string().optional(),
+    /** 解密成功后显示的标题；省略则沿用 title（列表与解锁前仍用 title） */
+    decryptedTitle: z.string().optional(),
     cipherText: z.string().optional(),
     cipherIv: z.string().optional(),
     cipherSalt: z.string().optional(),
+    /** PBKDF2 迭代次数；省略则文章页按与 article-crypto.js 相同的默认值 */
+    cipherIterations: z.number().int().positive().optional(),
   })
     .superRefine((data, ctx) => {
       if (data.encrypted === true) {

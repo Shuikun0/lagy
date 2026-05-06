@@ -273,6 +273,48 @@
         flex-direction: column;
         gap: 12px;
       }
+      .enc-toggle-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0;
+        font-size: 13px;
+        color: var(--text);
+        cursor: pointer;
+        user-select: none;
+        width: fit-content;
+      }
+      .enc-toggle-label input[type='checkbox'] {
+        width: 1.05rem;
+        height: 1.05rem;
+        accent-color: var(--primary);
+      }
+      .enc-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .enc-panel.hidden {
+        display: none;
+      }
+      .field-block {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .field-label {
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: var(--muted);
+      }
+      .field-sublabel {
+        margin: -4px 0 0;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--muted);
+        opacity: 0.92;
+      }
       .advanced-details {
         border: 1px solid var(--outline-variant);
         border-radius: 4px;
@@ -479,32 +521,70 @@
       </div>
 
       <div class="meta">
-        <input
-          type="text"
-          id="encPassword"
-          class="field-input"
-          placeholder="加密暗号（留空则不加密）"
-          name="x_enc_passphrase"
-          autocomplete="new-password"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck="false"
-          data-lpignore="true"
-          data-1p-ignore="true"
-        />
+        <label
+          class="enc-toggle-label"
+          title="展开下方面板，设置暗号、真实标题与密码提示"
+        >
+          <input type="checkbox" id="encEnabled" />
+          加密正文
+        </label>
 
-        <div id="encHintStack" class="enc-hint-stack hidden">
-          <div id="panelHintWrite" class="panel-write panel-write--hint">
-            <textarea
-              id="encHint"
-              placeholder="密码提示（支持 Markdown）"
-              name="x_enc_hint"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-            >阅读这篇文章需要暗号。</textarea>
-          </div>
+        <div id="encPanel" class="enc-panel hidden">
+          <details id="encDetails" class="advanced-details enc-details" open>
+            <summary class="advanced-summary">加密与密码提示</summary>
+            <div class="stack advanced-inner">
+              <div class="field-block">
+                <label class="field-label" for="encPassword">加密暗号</label>
+                <input
+                  type="text"
+                  id="encPassword"
+                  class="field-input"
+                  placeholder="留空则本文不加密导出"
+                  name="x_enc_passphrase"
+                  autocomplete="new-password"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                />
+              </div>
+
+              <div class="field-block">
+                <label class="field-label" for="decryptedTitle">真实标题（可选）</label>
+                <input
+                  type="text"
+                  id="decryptedTitle"
+                  class="field-input"
+                  placeholder="留空则与顶部标题一致；仅在解密成功后替换页眉标题"
+                  name="x_decrypted_title"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  title="列表与解锁前仍显示顶部「标题」"
+                />
+              </div>
+
+              <div class="field-block">
+                <label class="field-label" for="encHint">密码提示</label>
+                <p class="field-sublabel">支持 Markdown，解锁前展示给读者。</p>
+                <div id="encHintStack" class="enc-hint-stack">
+                  <div id="panelHintWrite" class="panel-write panel-write--hint">
+                    <textarea
+                      id="encHint"
+                      placeholder="可选：补充一句说明…"
+                      name="x_enc_hint"
+                      autocomplete="off"
+                      autocorrect="off"
+                      autocapitalize="off"
+                      spellcheck="false"
+                    >阅读这篇文章需要暗号。</textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
         <details class="advanced-details">
@@ -546,15 +626,15 @@
               spellcheck="false"
             />
             <div class="meta-inline">
-              <label title="勾选则导出时的日期永远是点按钮当天的本地日期"
-                ><input type="checkbox" id="autoDate" checked /> 日期跟导出当天</label
+              <label title="勾选则导出时的日期自动使用点击导出当天的本地日期"
+                ><input type="checkbox" id="autoDate" checked /> 自动标注日期</label
               >
               <div id="manualDateWrap">
                 <input
                   type="date"
                   id="pubDate"
                   class="field-input"
-                  title="关闭「日期跟导出当天」后可以选手动日期"
+                  title="关闭「自动标注日期」后可以选手动日期"
                   name="x_pub_date"
                   autocomplete="off"
                 />
@@ -612,6 +692,11 @@
       var ENC_BODY_PLACEHOLDER = '阅读这篇文章需要暗号';
       var DEFAULT_PASSWORD_HINT = '阅读这篇文章需要暗号。';
 
+      function pushOptionalDecryptedTitle(lines) {
+        var rt = document.getElementById('decryptedTitle').value.trim();
+        if (rt) lines.push('decryptedTitle: ' + yamlScalar(rt));
+      }
+
       function buildMarkdown(data) {
         const lines = [
           '---',
@@ -639,6 +724,8 @@
           'encrypted: true',
         ];
         lines.push('passwordHint: ' + yamlScalar(hintStr));
+        pushOptionalDecryptedTitle(lines);
+        lines.push('cipherIterations: ' + bundle.cipherIterations);
         lines.push('cipherText: ' + yamlScalar(bundle.cipherText));
         lines.push('cipherIv: ' + yamlScalar(bundle.cipherIv));
         lines.push('cipherSalt: ' + yamlScalar(bundle.cipherSalt));
@@ -647,10 +734,15 @@
       }
 
       async function buildMarkdownMaybeEncrypted(data) {
-        var pwd = document.getElementById('encPassword').value.trim();
+        var encOn = document.getElementById('encEnabled').checked;
+        var pwd = encOn ? document.getElementById('encPassword').value.trim() : '';
         var hintStr = document.getElementById('encHint').value.trim();
 
-        if (pwd) {
+        if (importedCipherBundle && !encOn) {
+          throw new Error('当前为加密文稿导入：请先勾选「加密正文」再导出。');
+        }
+
+        if (pwd && encOn) {
           if (!window.articleCrypto) throw new Error('加密脚本未加载，请检查 ../js/article-crypto.js');
           importedCipherBundle = null;
           var plain = (data.body || '').replace(/\s+$/, '');
@@ -665,6 +757,8 @@
             'encrypted: true',
           ];
           lines.push('passwordHint: ' + yamlScalar(hintStr));
+          pushOptionalDecryptedTitle(lines);
+          lines.push('cipherIterations: ' + pkg.cipherIterations);
           lines.push('cipherText: ' + yamlScalar(pkg.cipherText));
           lines.push('cipherIv: ' + yamlScalar(pkg.cipherIv));
           lines.push('cipherSalt: ' + yamlScalar(pkg.cipherSalt));
@@ -672,7 +766,7 @@
           return lines.join('\n');
         }
 
-        if (importedCipherBundle) {
+        if (importedCipherBundle && encOn) {
           var bodyNow = (data.body || '').replace(/\s+$/, '');
           if (bodyNow !== importedCipherBundle.bodySnapshot) {
             throw new Error('加密文章的正文已改动：请填写暗号以重新加密后再导出');
@@ -732,21 +826,26 @@
       var encHintEl = document.getElementById('encHint');
       var encHintStackEl = document.getElementById('encHintStack');
       var encPasswordEl = document.getElementById('encPassword');
+      var encEnabledEl = document.getElementById('encEnabled');
+      var encPanelEl = document.getElementById('encPanel');
       var btnPreviewHintEl = document.getElementById('btnPreviewHint');
 
       function autoResizeHint() {
-        if (!encHintEl || encHintStackEl.classList.contains('hidden')) return;
+        if (!encHintEl || !encPanelEl || encPanelEl.classList.contains('hidden')) return;
         encHintEl.style.height = 'auto';
         encHintEl.style.height = encHintEl.scrollHeight + 'px';
       }
 
-      function syncEncHintUI() {
-        if (!encHintEl || !encHintStackEl) return;
-        var pwdOn = !!encPasswordEl.value.trim();
-        var allowHint = pwdOn || importedCipherBundle != null;
-        encHintStackEl.classList.toggle('hidden', !allowHint);
-        if (btnPreviewHintEl) btnPreviewHintEl.disabled = !allowHint;
-        if (allowHint) autoResizeHint();
+      function syncEncPanelUI() {
+        if (!encPanelEl || !encEnabledEl) return;
+        var encOn = encEnabledEl.checked;
+        encPanelEl.classList.toggle('hidden', !encOn);
+        if (encOn) {
+          var det = document.getElementById('encDetails');
+          if (det) det.open = true;
+        }
+        if (btnPreviewHintEl) btnPreviewHintEl.disabled = !encOn;
+        if (encOn) autoResizeHint();
       }
 
       function fallbackSlug() {
@@ -810,22 +909,33 @@
 
         document.getElementById('draft').checked = fm.draft === true;
         document.getElementById('encPassword').value = '';
+        document.getElementById('decryptedTitle').value = '';
         encHintEl.value = DEFAULT_PASSWORD_HINT;
+        encEnabledEl.checked = false;
 
         bodyEl.value = parsed.body.replace(/\s+$/, '');
         autoResizeBody();
 
         if (fm.encrypted === true && fm.cipherText && fm.cipherIv && fm.cipherSalt) {
+          var ciRaw = fm.cipherIterations;
+          var ciParsed =
+            ciRaw != null && !isNaN(Number(ciRaw)) && Number(ciRaw) > 0
+              ? Math.floor(Number(ciRaw))
+              : (window.articleCrypto && window.articleCrypto.PBKDF2_ITERATIONS) || 600000;
           importedCipherBundle = {
             cipherText: String(fm.cipherText),
             cipherIv: String(fm.cipherIv),
             cipherSalt: String(fm.cipherSalt),
+            cipherIterations: ciParsed,
             bodySnapshot: bodyEl.value.replace(/\s+$/, ''),
           };
           var importedHint = fm.passwordHint != null ? String(fm.passwordHint).trim() : '';
           encHintEl.value = importedHint || DEFAULT_PASSWORD_HINT;
+          document.getElementById('decryptedTitle').value =
+            fm.decryptedTitle != null ? String(fm.decryptedTitle) : '';
+          encEnabledEl.checked = true;
         }
-        syncEncHintUI();
+        syncEncPanelUI();
       }
 
       var imgPrefixEl = document.getElementById('imgPrefix');
@@ -956,14 +1066,14 @@
         }
       }
 
-      encPasswordEl.addEventListener('input', function () {
-        syncEncHintUI();
+      encEnabledEl.addEventListener('change', function () {
+        syncEncPanelUI();
       });
       encHintEl.addEventListener('input', function () {
         autoResizeHint();
       });
       window.addEventListener('resize', autoResizeHint);
-      syncEncHintUI();
+      syncEncPanelUI();
       requestAnimationFrame(autoResizeHint);
 
       function closePreview() {
@@ -985,7 +1095,7 @@
       }
 
       function openPreviewHint() {
-        if (!encHintStackEl || encHintStackEl.classList.contains('hidden')) return;
+        if (!encEnabledEl.checked || !encPanelEl || encPanelEl.classList.contains('hidden')) return;
         previewFocusReturnEl = btnPreviewHintEl || btnPreview;
         previewOverlay.setAttribute('aria-label', '密码提示预览');
         renderMarkdownInto(fullscreenPreview, encHintEl.value);

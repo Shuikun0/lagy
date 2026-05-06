@@ -8,3 +8,10 @@ export function getPostHref(baseUrl: string, postId: string): string {
   const h = getHomeHref(baseUrl);
   return h === '/' ? `/blog/${postId}/` : `${h}/blog/${postId}/`;
 }
+
+/** `public/` 下文件的 URL，例如 `images/cover.jpg` → `/images/cover.jpg`（含子路径前缀） */
+export function getPublicHref(baseUrl: string, pathInPublic: string): string {
+  const b = (baseUrl || '/').replace(/\/?$/, '/');
+  const p = pathInPublic.replace(/^\//, '');
+  return `${b}${p}`;
+}

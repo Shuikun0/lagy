@@ -16,7 +16,8 @@ if args.count >= 2 {
   outPath = (cwd as NSString).appendingPathComponent(defaultOut)
 }
 
-let px = 128
+// 略大图幅 + 更大字号，标签页缩小时仍显眼（浏览器会按需缩放）
+let px = 192
 let size = NSSize(width: px, height: px)
 
 guard
@@ -49,7 +50,7 @@ NSGraphicsContext.current = ctx
 NSColor.clear.set()
 NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
 
-guard let emojiFont = NSFont(name: "Apple Color Emoji", size: 82) else {
+guard let emojiFont = NSFont(name: "Apple Color Emoji", size: 132) else {
   fputs("找不到 Apple Color Emoji 字体\n", stderr)
   exit(1)
 }
