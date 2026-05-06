@@ -82,7 +82,8 @@ body {
   animation: none !important;
 }
 
-body.page-home .wrap {
+body.page-home .wrap,
+body.page-welcome .wrap {
   font-family: var(--font-blog-name);
 }
 
@@ -105,6 +106,83 @@ a:hover {
   max-width: var(--measure-wide);
   margin: 0 auto;
   padding: 3.85rem 1.5rem 5rem;
+}
+
+.wrap--splash {
+  position: relative;
+  max-width: none;
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 4.25rem;
+  padding-bottom: 4rem;
+}
+
+.splash-toolbar {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+}
+
+body.page-welcome .page-main {
+  animation-delay: 0.07s;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--measure);
+}
+
+.welcome-shell {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.welcome-title {
+  font-size: clamp(1.35rem, 4vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 1rem;
+  color: var(--fg);
+}
+
+.welcome-lede {
+  margin: 0 0 2rem;
+  color: var(--fg-soft);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.welcome-enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--fg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 4%, transparent);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.welcome-enter:hover {
+  background: var(--accent-soft);
+  border-bottom-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent-hover);
 }
 
 /* —— Header：固定轨道高度，主页/文章右侧均为主题按钮 —— */
@@ -255,9 +333,75 @@ a.toolbar-btn.home-btn {
   -webkit-user-select: none;
 }
 
+.home-brand-cluster {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.45rem 0.75rem;
+  max-width: 100%;
+}
+
+@keyframes home-last-updated-dismiss {
+  0%,
+  38% {
+    opacity: 1;
+    max-width: 16rem;
+    margin: 0;
+    padding: 0;
+  }
+  50% {
+    opacity: 0;
+    max-width: 16rem;
+  }
+  100% {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.home-last-updated {
+  display: inline-block;
+  min-width: 0;
+  align-self: flex-end;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: color-mix(in srgb, var(--muted) 82%, var(--bg));
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  vertical-align: bottom;
+  user-select: text;
+  -webkit-user-select: text;
+  transition: none;
+  /** 默认不再播放入场动画，避免移开 :hover 后 animation 重新套用又从 0% 播一遍（前几帧仍是 opacity:1 → 体感延迟） */
+  animation: none;
+}
+
+.home-last-updated:not([data-intro-done]) {
+  animation: home-last-updated-dismiss 1.85s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/** 仅 :hover；不用 :focus-within，否则点击 logo 后焦点仍在，鼠标移开文字还会卡住 */
+.home-brand-cluster:hover .home-last-updated,
+.home-brand-cluster:has(.home-logo-link:focus-visible) .home-last-updated {
+  animation: none !important;
+  opacity: 1;
+  max-width: min(16rem, 100%);
+  overflow: visible;
+  transition: none;
+}
+
 .home-logo-link {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   border-bottom: none;
   text-decoration: none;
   color: inherit;
@@ -283,10 +427,12 @@ a.toolbar-btn.home-btn {
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  width: auto;
   height: max(2.85rem, calc(var(--blog-title-size) * 1.72));
+  width: auto;
+  max-width: 100%;
   max-height: min(3.85rem, calc(var(--blog-title-size) * 1.88));
   object-fit: contain;
+  /** 由 HTML width/height + 内联 aspect-ratio 推导占位宽度；勿删以免解码前 width 塌成 0 */
 }
 
 @media (min-width: 640px) {
@@ -394,6 +540,11 @@ a.toolbar-btn.home-btn {
   font-weight: inherit;
   color: color-mix(in srgb, var(--muted) 52%, var(--bg));
   opacity: 0.72;
+}
+
+/** 主页列表：发布时间默认隐藏，按 i 切换 body.show-post-dates 显示 */
+body.page-home:not(.show-post-dates) .post-card-date {
+  visibility: hidden;
 }
 
 .post-card-line {
@@ -548,7 +699,7 @@ article.prose img {
   margin: 0;
 }
 
-/* 弹簧式横向晃动（出错反馈）；不写在 prefers-reduced-motion 内以免被本站其它样式连带关掉 */
+/* 提示文案横向晃动（出错反馈）；不写在 prefers-reduced-motion 内以免被本站其它样式连带关掉 */
 @keyframes enc-gate-shake {
   0% {
     transform: translateX(0);
@@ -580,10 +731,9 @@ article.prose img {
   align-items: stretch;
   width: calc(100% - 1.5rem);
   max-width: calc(100% - 1.5rem);
-  transform: translateZ(0);
 }
 
-.enc-gate-shake-root.enc-gate-shake {
+.enc-gate-err.enc-gate-shake {
   animation: enc-gate-shake 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -604,26 +754,29 @@ article.prose img {
   color: var(--fg);
 }
 
+/* 固定占位，避免显隐时版面上下跳动；仅淡出时有 opacity 过渡（淡入无过渡） */
 .enc-gate-err {
   box-sizing: border-box;
-  margin: 0;
+  margin: 0.65rem 0 0;
   padding: 0;
   width: 100%;
+  min-height: 1.35em;
   text-align: center;
   font-size: 0.88rem;
   color: var(--muted);
   font-weight: 400;
   opacity: 0;
   visibility: hidden;
-  transition:
-    opacity 0.48s ease,
-    visibility 0.48s ease,
-    margin-top 0.35s ease;
+  transition: none;
 }
 
 .enc-gate-err.is-visible {
-  margin-top: 0.65rem;
   opacity: 1;
   visibility: visible;
+}
+
+.enc-gate-err.is-fading-out {
+  visibility: visible;
+  transition: opacity 0.22s ease-out;
 }
 

@@ -1,48 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
 import { SITE_NAME } from '../site';
-import { getPostHref } from '../paths';
-import { getCollection } from 'astro:content';
+import { getHomeHref } from '../paths';
 
-const posts = (await getCollection('blog', ({ data }) => import.meta.env.PROD ? data.draft !== true : true)).sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
-
-const baseUrl = import.meta.env.BASE_URL;
-const postHref = (id: string) => getPostHref(baseUrl, id);
-
-const listDateOpts: Intl.DateTimeFormatOptions = {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-};
+const enterHref = getHomeHref(import.meta.env.BASE_URL);
 ---
 
-<Base title={SITE_NAME} headerVariant="home">
-  <ul class="post-list">
-    {
-      posts.map((post) => (
-        <li>
-          <a
-            class="post-card"
-            href={postHref(post.id)}
-            {...(post.data.encrypted === true ? { 'data-astro-reload': '' as const } : {})}
-          >
-            <div class="post-card-inner">
-              <div class="post-card-row">
-                <span class="post-card-title">{post.data.title}</span>
-                <span class="post-card-meta">
-                  <time datetime={post.data.pubDate.toISOString()}>
-                    {post.data.pubDate.toLocaleDateString('zh-CN', listDateOpts)}
-                  </time>
-                  {post.data.draft && <span class="post-card-draft">草稿</span>}
-                </span>
-              </div>
-              {post.data.listLine && <p class="post-card-line">{post.data.listLine}</p>}
-            </div>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
+<Base title={SITE_NAME} splash>
+  <div class="welcome-shell">
+    <h1 class="welcome-title">{SITE_NAME}</h1>
+    <p class="welcome-lede">欢迎来访。</p>
+    <a class="welcome-enter" href={enterHref}>进入博客</a>
+  </div>
 </Base>

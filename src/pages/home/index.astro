@@ -1,0 +1,54 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE_NAME } from '../../site';
+import { getPostHref } from '../../paths';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => import.meta.env.PROD ? data.draft !== true : true)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+const latestPub = posts[0]?.data.pubDate;
+const homeLastUpdatedLine =
+  latestPub != null
+    ? `最后更新于${latestPub.getFullYear()}年${latestPub.getMonth() + 1}月${latestPub.getDate()}日`
+    : undefined;
+
+const baseUrl = import.meta.env.BASE_URL;
+const postHref = (id: string) => getPostHref(baseUrl, id);
+
+const listDateOpts: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+};
+---
+
+<Base title={SITE_NAME} headerVariant="home" homeLastUpdatedLine={homeLastUpdatedLine}>
+  <ul class="post-list">
+    {
+      posts.map((post) => (
+        <li>
+          <a
+            class="post-card"
+            href={postHref(post.id)}
+            {...(post.data.encrypted === true ? { 'data-astro-reload': '' as const } : {})}
+          >
+            <div class="post-card-inner">
+              <div class="post-card-row">
+                <span class="post-card-title">{post.data.title}</span>
+                <span class="post-card-meta">
+                  <time class="post-card-date" datetime={post.data.pubDate.toISOString()}>
+                    {post.data.pubDate.toLocaleDateString('zh-CN', listDateOpts)}
+                  </time>
+                  {post.data.draft && <span class="post-card-draft">草稿</span>}
+                </span>
+              </div>
+              {post.data.listLine && <p class="post-card-line">{post.data.listLine}</p>}
+            </div>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>

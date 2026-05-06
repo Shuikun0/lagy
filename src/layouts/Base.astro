@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
-import { SITE_NAME, SITE_TAB_TITLE } from '../site';
+import { HOME_LOGO_INTRINSIC, SITE_NAME, SITE_TAB_TITLE } from '../site';
 import { getHomeHref, getPublicHref } from '../paths';
 
 interface Props {
@@ -9,11 +9,15 @@ interface Props {
   description?: string;
   headerVariant?: 'home' | 'article';
   articleTitle?: string;
+  /** 主页 logo 旁一行小字，例如「最后更新于2026年5月7日」 */
+  homeLastUpdatedLine?: string;
+  /** 根路径欢迎页：仅保留主题切换与正文区，无站点顶栏 */
+  splash?: boolean;
 }
 
 const siteName = SITE_NAME;
 
-const { title, description, headerVariant = 'home', articleTitle } = Astro.props;
+const { title, description, headerVariant = 'home', articleTitle, homeLastUpdatedLine, splash = false } = Astro.props;
 const pageTitle = title === siteName ? SITE_TAB_TITLE : `${title} · ${SITE_TAB_TITLE}`;
 const baseUrl = import.meta.env.BASE_URL;
 const homeHref = getHomeHref(baseUrl);
@@ -22,6 +26,7 @@ const faviconBase = (baseUrl || '/').replace(/\/?$/, '/');
 /** public/favicon.png：在 macOS 上用 Apple Color Emoji 离线渲染的 📟（脚本 scripts/render-ios-favicon.swift） */
 const faviconHref = `${faviconBase}favicon.png`;
 const isHome = headerVariant === 'home';
+const isSplash = splash === true;
 ---
 
 <!doctype html>
@@ -50,16 +55,58 @@ const isHome = headerVariant === 'home';
     />
     <ClientRouter />
   </head>
-  <body class:list={[{ 'page-home': isHome, 'page-article': !isHome }]}>
-    <div class="wrap">
+  <body class:list={[{ 'page-home': isHome && !isSplash, 'page-article': !isHome && !isSplash, 'page-welcome': isSplash }]}>
+    <div class:list={['wrap', { 'wrap--splash': isSplash }]}>
+      {
+        isSplash ? (
+          <div class="splash-toolbar">
+            <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
+              <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+        ) : (
       <header class="site-header">
         <div class="site-header-primary">
           {
             isHome ? (
               <h1 class="home-brand-heading">
-                <a class="home-logo-link" href={homeHref}>
-                  <img class="home-logo home-logo--match-fg" src={homeLogoSrc} alt={siteName} decoding="async" draggable={false} />
-                </a>
+                <span class="home-brand-cluster">
+                  <a class="home-logo-link" href={homeHref}>
+                    <img
+                      class="home-logo home-logo--match-fg"
+                      src={homeLogoSrc}
+                      alt={siteName}
+                      width={HOME_LOGO_INTRINSIC.width}
+                      height={HOME_LOGO_INTRINSIC.height}
+                      style={`aspect-ratio: ${HOME_LOGO_INTRINSIC.width} / ${HOME_LOGO_INTRINSIC.height}`}
+                      decoding="async"
+                      draggable={false}
+                    />
+                  </a>
+                  {
+                    homeLastUpdatedLine ? (
+                      <span class="home-last-updated">{homeLastUpdatedLine}</span>
+                    ) : null
+                  }
+                </span>
               </h1>
             ) : (
               <a class="toolbar-btn home-btn" href={homeHref} aria-label={`返回${siteName}`}>
@@ -101,6 +148,8 @@ const isHome = headerVariant === 'home';
           </button>
         </div>
       </header>
+        )
+      }
       <div class="page-main">
         {
           !isHome && articleTitle ? (
@@ -112,7 +161,68 @@ const isHome = headerVariant === 'home';
         <slot />
       </div>
     </div>
+    <!-- 晚于 head 中外链 CSS：在 prefers-reduced-motion 下仍播放本站动画，并盖过 Astro viewtransitions.css 的 animation:none -->
+    <style is:inline>
+      @media (prefers-reduced-motion), (prefers-reduced-motion: reduce) {
+        .page-main {
+          animation: page-main-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+        }
+        body.page-home .page-main,
+        body.page-welcome .page-main {
+          animation-delay: 0.07s !important;
+        }
+        .home-last-updated:not([data-intro-done]) {
+          animation: home-last-updated-dismiss 1.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+        }
+        .enc-gate-shake-root.enc-gate-shake {
+          animation: enc-gate-shake 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+        }
+        ::view-transition-old(*) {
+          animation: astroFadeOut 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+        }
+        ::view-transition-new(*) {
+          animation: astroFadeIn 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+        }
+        html[data-astro-transition-fallback='old'] [data-astro-transition-scope],
+        html[data-astro-transition-fallback='old'][data-astro-transition-scope] {
+          animation: astroFadeOut 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+        }
+        html[data-astro-transition-fallback='new'] [data-astro-transition-scope],
+        html[data-astro-transition-fallback='new'][data-astro-transition-scope] {
+          animation: astroFadeIn 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+        }
+        html[data-astro-transition='back'][data-astro-transition-fallback='old'] [data-astro-transition-scope],
+        html[data-astro-transition='back'][data-astro-transition-fallback='old'][data-astro-transition-scope] {
+          animation: astroFadeOut 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+        }
+        html[data-astro-transition='back'][data-astro-transition-fallback='new'] [data-astro-transition-scope],
+        html[data-astro-transition='back'][data-astro-transition-fallback='new'][data-astro-transition-scope] {
+          animation: astroFadeIn 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+        }
+      }
+    </style>
     <script is:inline>
+      function bindHomeLastUpdatedIntroDone() {
+        document.querySelectorAll('.home-brand-cluster').forEach(function (cluster) {
+          if (cluster.dataset.homeIntroBind === '1') return;
+          cluster.dataset.homeIntroBind = '1';
+          var el = cluster.querySelector('.home-last-updated');
+          if (!el) return;
+          function markIntroDone() {
+            if (el.hasAttribute('data-intro-done')) return;
+            el.setAttribute('data-intro-done', '');
+          }
+          el.addEventListener('animationend', function (ev) {
+            if (ev.animationName !== 'home-last-updated-dismiss') return;
+            markIntroDone();
+          });
+          cluster.addEventListener('mouseenter', markIntroDone);
+          cluster.addEventListener('focusin', markIntroDone);
+        });
+      }
+      bindHomeLastUpdatedIntroDone();
+      document.addEventListener('astro:page-load', bindHomeLastUpdatedIntroDone);
+
       document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest && e.target.closest('.theme-toggle');
         if (!btn) return;
@@ -123,6 +233,20 @@ const isHome = headerVariant === 'home';
           localStorage.setItem('theme', next);
         } catch (err) {}
       });
+      document.addEventListener(
+        'keydown',
+        function (e) {
+          if (!document.body.classList.contains('page-home')) return;
+          if (e.defaultPrevented) return;
+          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          if (e.key !== 'i' && e.key !== 'I') return;
+          var el = e.target;
+          if (el && el.closest && el.closest('input, textarea, select, [contenteditable="true"]')) return;
+          e.preventDefault();
+          document.body.classList.toggle('show-post-dates');
+        },
+        true,
+      );
     </script>
   </body>
 </html>
