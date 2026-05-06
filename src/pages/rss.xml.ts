@@ -1,7 +1,7 @@
 import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
-import { SITE_NAME } from '../site';
+import { SITE_TAB_TITLE } from '../site';
 
 export const GET: APIRoute = async ({ site }) => {
   const posts = (await getCollection('blog', ({ data }) => data.draft !== true)).sort(
@@ -13,8 +13,8 @@ export const GET: APIRoute = async ({ site }) => {
   }
 
   return rss({
-    title: SITE_NAME,
-    description: SITE_NAME,
+    title: SITE_TAB_TITLE,
+    description: SITE_TAB_TITLE,
     site,
     items: posts.map((post) => ({
       link: `/blog/${post.id}/`,

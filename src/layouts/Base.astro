@@ -1,14 +1,12 @@
 ---
 import '../styles/global.css';
-import { SITE_NAME } from '../site';
+import { SITE_NAME, SITE_TAB_TITLE } from '../site';
 import { getHomeHref } from '../paths';
 
 interface Props {
   title: string;
   description?: string;
-  /** 首页：动画站点名；文章页：返回 + 标题 + 主题按钮同一行 */
   headerVariant?: 'home' | 'article';
-  /** `headerVariant="article"` 时传入，显示在顶栏中间 */
   articleTitle?: string;
 }
 
@@ -17,8 +15,11 @@ const siteChars = [...siteName];
 const staggerMs = 72;
 
 const { title, description, headerVariant = 'home', articleTitle } = Astro.props;
-const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
+const pageTitle = title === siteName ? SITE_TAB_TITLE : `${title} · ${SITE_TAB_TITLE}`;
 const homeHref = getHomeHref(import.meta.env.BASE_URL);
+const faviconBase = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+/** public/favicon.png：在 macOS 上用 Apple Color Emoji 离线渲染的 📟（脚本 scripts/render-ios-favicon.swift） */
+const faviconHref = `${faviconBase}favicon.png`;
 const isHome = headerVariant === 'home';
 ---
 
@@ -30,6 +31,7 @@ const isHome = headerVariant === 'home';
     <meta name="generator" content={Astro.generator} />
     {description && <meta name="description" content={description} />}
     <title>{pageTitle}</title>
+    <link rel="icon" href={faviconHref} sizes="128x128" type="image/png" />
     <script is:inline>
       try {
         var _t = localStorage.getItem('theme');
@@ -42,11 +44,11 @@ const isHome = headerVariant === 'home';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body class:list={[{ 'page-home': isHome, 'page-article': !isHome }]}>
     <div class="wrap">
       <header class:list={['site-header', isHome ? 'site-header--home' : 'site-header--article']}>
         {
@@ -54,74 +56,90 @@ const isHome = headerVariant === 'home';
             <>
               <div class="site-header-primary">
                 <h1 class="site-title">
-                  <a class="site-title-link" href={homeHref} aria-label={siteName}>
-                    <span class="site-title-inner" aria-hidden="true">
-                      {siteChars.map((ch, i) => (
-                        <span class="site-title-char" style={`--site-title-d: ${i * staggerMs}ms`}>
-                          {ch}
-                        </span>
-                      ))}
-                    </span>
-                  </a>
+                  <span class="site-title-cluster">
+                    <a class="site-title-link" href={homeHref} aria-label={siteName}>
+                      <span class="site-title-inner" aria-hidden="true">
+                        {siteChars.map((ch, i) => (
+                          <span class="site-title-char" style={`--site-title-d: ${i * staggerMs}ms`}>
+                            {ch}
+                          </span>
+                        ))}
+                      </span>
+                    </a>
+                  </span>
                 </h1>
               </div>
-              <button type="button" class="theme-toggle" aria-label="切换浅色或深色模式">
-                <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
-                  <path
-                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                  />
-                </svg>
-                <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    fill="none"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </button>
+              <div class="site-header-toolbar">
+                <slot name="header-tools" />
+                <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
+                  <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
+                    <path
+                      d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      fill="none"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
             </>
           ) : (
             <>
-              <a class="back-home" href={homeHref} aria-label="返回首页">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M14 6l-6 6 6 6"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </a>
-              <h1 class="article-header-title">{articleTitle}</h1>
-              <button type="button" class="theme-toggle" aria-label="切换浅色或深色模式">
-                <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
-                  <path
-                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                  />
-                </svg>
-                <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    fill="none"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </button>
+              <div class="site-header-primary">
+                <h1 class="article-header-title">{articleTitle}</h1>
+              </div>
+              <div class="site-header-toolbar">
+                <a class="toolbar-btn home-btn" href={homeHref} aria-label="返回首页">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M9 22V12h6v10"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </a>
+                <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
+                  <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
+                    <path
+                      d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      fill="none"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
             </>
           )
         }

@@ -18,10 +18,46 @@ const listDateOpts: Intl.DateTimeFormatOptions = {
 ---
 
 <Base title={SITE_NAME} headerVariant="home">
-  <ul class="post-list">
+  <div class="sort-dropdown" slot="header-tools">
+    <button
+      type="button"
+      class="toolbar-btn sort-menu-btn"
+      id="sort-menu-btn"
+      aria-expanded="false"
+      aria-haspopup="true"
+      aria-controls="sort-menu"
+      aria-label="文章排序"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M4 6h11M4 12h7M4 18h4"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+        />
+        <path
+          d="M17 8v8m0 0 2-2m-2 2-2-2"
+          stroke="currentColor"
+          stroke-width="1.65"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </button>
+    <div class="sort-menu" id="sort-menu" role="menu" hidden>
+      <button type="button" class="sort-menu-item" role="menuitemradio" data-sort="desc" aria-checked="true">
+        最新在前
+      </button>
+      <button type="button" class="sort-menu-item" role="menuitemradio" data-sort="asc" aria-checked="false">
+        最早在前
+      </button>
+    </div>
+  </div>
+
+  <ul class="post-list" id="post-list">
     {
       posts.map((post) => (
-        <li>
+        <li data-pub-ts={post.data.pubDate.valueOf()}>
           <a class="post-card" href={postHref(post.id)}>
             <div class="post-card-inner">
               <div class="post-card-row">
@@ -40,4 +76,85 @@ const listDateOpts: Intl.DateTimeFormatOptions = {
       ))
     }
   </ul>
+
+  <script is:inline>
+    (function () {
+      var STORAGE = 'blog-post-sort-order';
+      var list = document.getElementById('post-list');
+      var btn = document.getElementById('sort-menu-btn');
+      var menu = document.getElementById('sort-menu');
+      if (!list || !btn || !menu) return;
+
+      function sortList(order) {
+        var items = Array.prototype.slice.call(list.children);
+        items.sort(function (a, b) {
+          var ta = parseInt(a.getAttribute('data-pub-ts'), 10) || 0;
+          var tb = parseInt(b.getAttribute('data-pub-ts'), 10) || 0;
+          return order === 'desc' ? tb - ta : ta - tb;
+        });
+        items.forEach(function (li) {
+          list.appendChild(li);
+        });
+      }
+
+      function readStored() {
+        try {
+          var v = localStorage.getItem(STORAGE);
+          if (v === 'asc' || v === 'desc') return v;
+        } catch (e) {}
+        return 'desc';
+      }
+
+      function applyUi(order) {
+        menu.querySelectorAll('.sort-menu-item').forEach(function (el) {
+          var active = el.getAttribute('data-sort') === order;
+          el.setAttribute('aria-checked', active ? 'true' : 'false');
+        });
+      }
+
+      function closeMenu() {
+        menu.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      function openMenu() {
+        menu.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+      }
+
+      var initial = readStored();
+      if (initial === 'asc') sortList('asc');
+      applyUi(initial);
+
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (menu.hidden) openMenu();
+        else closeMenu();
+      });
+
+      menu.querySelectorAll('.sort-menu-item').forEach(function (item) {
+        item.addEventListener('click', function () {
+          var order = item.getAttribute('data-sort');
+          if (order !== 'asc' && order !== 'desc') return;
+          sortList(order);
+          try {
+            localStorage.setItem(STORAGE, order);
+          } catch (e) {}
+          applyUi(order);
+          closeMenu();
+        });
+      });
+
+      document.addEventListener('click', function () {
+        closeMenu();
+      });
+      menu.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeMenu();
+      });
+    })();
+  </script>
 </Base>

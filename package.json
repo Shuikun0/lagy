@@ -13,7 +13,8 @@
     "push": "bash scripts/push-github.sh",
     "push:github": "bash scripts/push-github.sh",
     "cms:local": "decap-server",
-    "new:post": "node scripts/new-post.mjs"
+    "new:post": "node scripts/new-post.mjs",
+    "favicon:ios": "swift scripts/render-ios-favicon.swift"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.13",
