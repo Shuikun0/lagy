@@ -86,23 +86,27 @@
         line-height: 0;
       }
       .theme-toggle:hover {
-        background: var(--state-hover);
+        background: transparent;
         color: var(--text);
       }
       .theme-toggle:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
       }
-      .theme-toggle svg {
-        width: 1.35rem;
-        height: 1.35rem;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 1.75;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+      .theme-toggle img {
+        width: 1.82rem;
+        height: 1.82rem;
+        object-fit: contain;
+        display: block;
       }
-      .theme-toggle svg.theme-ico-hidden {
+      /* 与主站 logo 一致：位图压成接近正文色的单色 */
+      :root[data-theme='light'] .theme-toggle img {
+        filter: brightness(0);
+      }
+      :root[data-theme='dark'] .theme-toggle img {
+        filter: brightness(0) invert(1);
+      }
+      .theme-toggle img.theme-ico-hidden {
         display: none !important;
       }
       main {
@@ -399,6 +403,9 @@
       #manualDateWrap.hidden {
         display: none;
       }
+      .pinned-wrap.hidden {
+        display: none;
+      }
       #manualDateWrap .field-input {
         padding: 8px 10px;
       }
@@ -467,15 +474,16 @@
   <body>
     <header class="top">
       <button type="button" id="themeToggle" class="theme-toggle" aria-label="切换到夜间模式">
-        <svg id="icoSun" class="theme-ico-sun" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="4" />
-          <path
-            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M17.66 6.34l1.41-1.41M19.07 19.07l-1.41-1.41M6.34 6.34l-1.41-1.41"
-          />
-        </svg>
-        <svg id="icoMoon" class="theme-ico-moon theme-ico-hidden" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
+        <img id="icoSun" class="theme-ico-sun" src="../images/icon_sun.png" alt="" width="29" height="29" decoding="async" />
+        <img
+          id="icoMoon"
+          class="theme-ico-moon theme-ico-hidden"
+          src="../images/icon_moon.png"
+          alt=""
+          width="29"
+          height="29"
+          decoding="async"
+        />
       </button>
     </header>
 
@@ -626,6 +634,23 @@
               spellcheck="false"
             />
             <div class="meta-inline">
+              <label title="勾选后可填写置顶顺序，数字越小在首页越靠前"
+                ><input type="checkbox" id="pinnedEnabled" /> 置顶这篇文章</label
+              >
+            </div>
+            <div id="pinnedWrap" class="pinned-wrap hidden">
+              <input
+                type="number"
+                id="pinned"
+                class="field-input"
+                placeholder="置顶顺序（整数，越小越靠前）"
+                title="写入 frontmatter 的 pinned 字段"
+                name="x_pinned"
+                step="1"
+                autocomplete="off"
+              />
+            </div>
+            <div class="meta-inline">
               <label title="勾选则导出时的日期自动使用点击导出当天的本地日期"
                 ><input type="checkbox" id="autoDate" checked /> 自动标注日期</label
               >
@@ -697,6 +722,12 @@
         if (rt) lines.push('decryptedTitle: ' + yamlScalar(rt));
       }
 
+      function pushPinnedLine(lines, data) {
+        if (typeof data.pinned === 'number' && !Number.isNaN(data.pinned)) {
+          lines.push('pinned: ' + data.pinned);
+        }
+      }
+
       function buildMarkdown(data) {
         const lines = [
           '---',
@@ -705,11 +736,9 @@
           'pubDate: ' + data.pubDate,
           'slug: ' + data.slug,
           'draft: ' + (data.draft ? 'true' : 'false'),
-          '---',
-          '',
-          (data.body || '').replace(/\s+$/, ''),
-          '',
         ];
+        pushPinnedLine(lines, data);
+        lines.push('---', '', (data.body || '').replace(/\s+$/, ''), '');
         return lines.join('\n');
       }
 
@@ -723,6 +752,7 @@
           'draft: ' + (data.draft ? 'true' : 'false'),
           'encrypted: true',
         ];
+        pushPinnedLine(lines, data);
         lines.push('passwordHint: ' + yamlScalar(hintStr));
         pushOptionalDecryptedTitle(lines);
         lines.push('cipherIterations: ' + bundle.cipherIterations);
@@ -756,6 +786,7 @@
             'draft: ' + (data.draft ? 'true' : 'false'),
             'encrypted: true',
           ];
+          pushPinnedLine(lines, data);
           lines.push('passwordHint: ' + yamlScalar(hintStr));
           pushOptionalDecryptedTitle(lines);
           lines.push('cipherIterations: ' + pkg.cipherIterations);
@@ -886,6 +917,15 @@
         return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
       }
 
+      function syncPinnedUI() {
+        var wrap = document.getElementById('pinnedWrap');
+        var en = document.getElementById('pinnedEnabled');
+        var inp = document.getElementById('pinned');
+        if (!wrap || !en || !inp) return;
+        wrap.classList.toggle('hidden', !en.checked);
+        if (!en.checked) inp.value = '';
+      }
+
       function applyImportedMarkdown(text, filenameStem) {
         var parsed = splitFrontmatter(text);
         var fm = parsed.fm;
@@ -893,6 +933,10 @@
 
         titleEl.value = fm.title != null ? String(fm.title) : '';
         document.getElementById('description').value = fm.description != null ? String(fm.description) : '';
+        var hasPinned = fm.pinned != null && fm.pinned !== '' && !isNaN(Number(fm.pinned));
+        document.getElementById('pinnedEnabled').checked = hasPinned;
+        document.getElementById('pinned').value = hasPinned ? String(Math.trunc(Number(fm.pinned))) : '';
+        syncPinnedUI();
 
         var slugFromFm = fm.slug != null ? String(fm.slug).trim() : '';
         slugEl.value = slugFromFm || (filenameStem ? filenameStem.replace(/[^a-z0-9-]/gi, '').toLowerCase() : '');
@@ -1025,6 +1069,9 @@
       }
       autoDateEl.addEventListener('change', syncDateUI);
       syncDateUI();
+
+      document.getElementById('pinnedEnabled').addEventListener('change', syncPinnedUI);
+      syncPinnedUI();
 
       function getPubDateForExport() {
         if (autoDateEl.checked) return localDateYMD(new Date());
@@ -1183,12 +1230,30 @@
           return null;
         }
 
+        var pinnedEnabled = document.getElementById('pinnedEnabled').checked;
+        var pinnedRaw = document.getElementById('pinned').value.trim();
+        var pinnedNum = undefined;
+        if (pinnedEnabled) {
+          if (pinnedRaw === '') {
+            err.textContent = '请填写置顶顺序（整数）';
+            err.classList.add('show');
+            return null;
+          }
+          if (!/^-?\d+$/.test(pinnedRaw)) {
+            err.textContent = '置顶须为整数';
+            err.classList.add('show');
+            return null;
+          }
+          pinnedNum = parseInt(pinnedRaw, 10);
+        }
+
         return {
           slug: slug,
           title: title,
           description: document.getElementById('description').value.trim(),
           pubDate: pubDate,
           draft: document.getElementById('draft').checked,
+          pinned: pinnedNum,
           body: bodyEl.value,
         };
       }

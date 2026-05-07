@@ -1,15 +1,103 @@
 ---
 import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
 import { SITE_NAME } from '../site';
-import { getHomeHref } from '../paths';
+import { getPostHref, getPublicHref } from '../paths';
 
-const enterHref = getHomeHref(import.meta.env.BASE_URL);
+const baseUrl = import.meta.env.BASE_URL;
+const iconLockSrc = getPublicHref(baseUrl, 'images/icon_lock.png');
+const iconPinSrc = getPublicHref(baseUrl, 'images/icon_pin.png');
+
+const allHomePosts = await getCollection('blog', ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
+
+function isListEncrypted(post: (typeof allHomePosts)[number]) {
+  return (
+    post.data.encrypted === true &&
+    typeof post.data.cipherText === 'string' &&
+    typeof post.data.cipherIv === 'string' &&
+    typeof post.data.cipherSalt === 'string'
+  );
+}
+
+function compareHomePosts<T extends { data: { pinned?: number; pubDate: Date } }>(a: T, b: T) {
+  const ap = a.data.pinned;
+  const bp = b.data.pinned;
+  const aPinned = typeof ap === 'number';
+  const bPinned = typeof bp === 'number';
+  if (aPinned && bPinned && ap !== bp) return ap - bp;
+  if (aPinned && !bPinned) return -1;
+  if (!aPinned && bPinned) return 1;
+  return b.data.pubDate.valueOf() - a.data.pubDate.valueOf();
+}
+
+const posts = [...allHomePosts].sort(compareHomePosts);
+
+function formatListDate(d: Date) {
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function touchMs(p: (typeof allHomePosts)[0]) {
+  return (p.data.updatedDate ?? p.data.pubDate).valueOf();
+}
+
+const latestTouched =
+  allHomePosts.length > 0 ? allHomePosts.reduce((a, b) => (touchMs(b) > touchMs(a) ? b : a)) : null;
+const homeLastUpdatedLine = latestTouched
+  ? `最后更新于${formatListDate(latestTouched.data.updatedDate ?? latestTouched.data.pubDate)}`
+  : undefined;
 ---
 
-<Base title={SITE_NAME} splash>
-  <div class="welcome-shell">
-    <h1 class="welcome-title">{SITE_NAME}</h1>
-    <p class="welcome-lede">欢迎来访。</p>
-    <a class="welcome-enter" href={enterHref}>进入博客</a>
-  </div>
+<Base title={SITE_NAME} headerVariant="home" homeLastUpdatedLine={homeLastUpdatedLine}>
+  {
+    posts.length === 0 ? (
+      <p class="post-card-line">还没有文章。在 <code>src/content/blog/</code> 下添加 Markdown 后即可在此列出。</p>
+    ) : (
+      <ul class="post-list">
+        {posts.map((post) => (
+          <li>
+            <a class="post-card" href={getPostHref(baseUrl, post.id)}>
+              <div class="post-card-inner">
+                <div class="post-card-row">
+                  <h2 class="post-card-title">
+                    <span class="post-card-title-text">{post.data.title}</span>
+                    {isListEncrypted(post) ? (
+                      <span class="post-card-title-badge" aria-label="加密">
+                        <img
+                          class="post-card-title-icon toolbar-icon--match-fg"
+                          src={iconLockSrc}
+                          alt=""
+                          width="22"
+                          height="22"
+                          decoding="async"
+                          draggable={false}
+                        />
+                      </span>
+                    ) : null}
+                    {typeof post.data.pinned === 'number' ? (
+                      <span class="post-card-title-badge" aria-label="置顶">
+                        <img
+                          class="post-card-title-icon toolbar-icon--match-fg"
+                          src={iconPinSrc}
+                          alt=""
+                          width="22"
+                          height="22"
+                          decoding="async"
+                          draggable={false}
+                        />
+                      </span>
+                    ) : null}
+                    {import.meta.env.DEV && post.data.draft ? <span class="post-card-draft">草稿</span> : null}
+                  </h2>
+                  <p class="post-card-meta post-card-date">
+                    <time datetime={post.data.pubDate.toISOString()}>{formatListDate(post.data.pubDate)}</time>
+                  </p>
+                </div>
+                {post.data.listLine ? <p class="post-card-line">{post.data.listLine}</p> : null}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 </Base>

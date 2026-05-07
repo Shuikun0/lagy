@@ -73,9 +73,34 @@ body {
 }
 
 /**
- * ClientRouter 软路由会触发默认 root 视图过渡（整页快照 cross-fade），顶栏 logo 会随之看起来「淡入淡出」。
- * 关掉 root 动画即可保留软路由、去掉顶栏参与过渡；不认该伪类的浏览器会忽略本段。
+ * ClientRouter：整页过渡仅用淡入淡出（无位移）；root 关掉过渡以免顶栏跟着闪。
  */
+@keyframes blog-vt-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes blog-vt-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(*) {
+  animation: blog-vt-fade-out 200ms ease-out both !important;
+}
+
+::view-transition-new(*) {
+  animation: blog-vt-fade-in 200ms ease-out both !important;
+}
+
 ::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -127,7 +152,7 @@ a:hover {
 }
 
 body.page-welcome .page-main {
-  animation-delay: 0.07s;
+  animation-delay: 0.04s;
   flex: 1;
   display: flex;
   align-items: center;
@@ -200,25 +225,23 @@ body.page-home .site-header {
   margin-bottom: 2.35rem;
 }
 
-/** 主页列表 / 文章标题+正文：每次进入页面时轻微显现 */
+/** 主页列表 / 文章标题+正文：每次进入页面时淡入（无位移） */
 @keyframes page-main-reveal {
   from {
     opacity: 0;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .page-main {
   opacity: 0;
-  animation: page-main-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: page-main-reveal 0.28s ease-out forwards;
 }
 
 body.page-home .page-main {
-  animation-delay: 0.07s;
+  animation-delay: 0.04s;
 }
 
 .article-title-wrap {
@@ -269,7 +292,7 @@ body.page-home .page-main {
 
 .toolbar-btn:hover {
   color: color-mix(in srgb, var(--muted) 78%, var(--fg));
-  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  background: transparent;
 }
 
 a.toolbar-btn.home-btn {
@@ -278,13 +301,15 @@ a.toolbar-btn.home-btn {
 }
 
 .toolbar-back-icon {
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.88rem;
+  height: 1.88rem;
   display: block;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
-.toolbar-btn svg {
+.toolbar-btn svg,
+.toolbar-btn img {
   display: block;
   flex-shrink: 0;
 }
@@ -307,6 +332,9 @@ a.toolbar-btn.home-btn {
 
 .theme-toggle-icon {
   display: none;
+  width: 1.82rem;
+  height: 1.82rem;
+  object-fit: contain;
 }
 
 /* 显示当前主题：夜间 → 月亮，日间 → 太阳 */
@@ -366,7 +394,7 @@ a.toolbar-btn.home-btn {
   display: inline-block;
   min-width: 0;
   align-self: flex-end;
-  font-family: var(--font-sans);
+  font-family: var(--font-blog-name);
   font-size: 0.72rem;
   font-weight: 400;
   color: color-mix(in srgb, var(--muted) 82%, var(--bg));
@@ -442,12 +470,14 @@ a.toolbar-btn.home-btn {
   }
 }
 
-/* 深色/浅色下压成单色，接近 var(--fg)；彩色 logo 请去掉 home-logo--match-fg */
-:root[data-theme='light'] .home-logo--match-fg {
+/* 深色/浅色下压成单色，接近 var(--fg)；彩色 assets 请去掉 --match-fg */
+:root[data-theme='light'] .home-logo--match-fg,
+:root[data-theme='light'] .toolbar-icon--match-fg {
   filter: brightness(0);
 }
 
-:root[data-theme='dark'] .home-logo--match-fg {
+:root[data-theme='dark'] .home-logo--match-fg,
+:root[data-theme='dark'] .toolbar-icon--match-fg {
   filter: brightness(0) invert(1);
 }
 
@@ -471,19 +501,12 @@ a.toolbar-btn.home-btn {
   text-decoration: none;
   color: inherit;
   border-bottom-color: transparent;
-  transition:
-    background 0.18s ease,
-    transform 0.18s ease;
 }
 
 .post-card:hover {
   color: inherit;
   border-bottom-color: transparent;
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-}
-
-.post-card:hover .post-card-title {
-  color: var(--fg);
+  background: transparent;
 }
 
 .post-card:focus-visible {
@@ -494,11 +517,27 @@ a.toolbar-btn.home-btn {
 .post-card.post-card--kbd-focus {
   color: inherit;
   border-bottom-color: transparent;
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  background: transparent;
 }
 
-.post-card.post-card--kbd-focus .post-card-title {
-  color: var(--fg);
+/**
+ * 手绘感下划线：较宽的 SVG 瓦片 repeat-x（波浪更疏），两端切线近乎水平 + butt 线帽减轻拼接感。
+ */
+:root[data-theme='light'] .post-card:hover .post-card-title-text,
+:root[data-theme='light'] .post-card.post-card--kbd-focus .post-card-title-text {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%23141414' stroke-width='1.75' stroke-linecap='butt' stroke-linejoin='round' d='M0 26.85 C27 26.68 41 24.55 56 25.95 C73 27.65 85 26.55 96 26.35'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='dark'] .post-card:hover .post-card-title-text,
+:root[data-theme='dark'] .post-card.post-card--kbd-focus .post-card-title-text {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%23f4f4f1' stroke-width='1.75' stroke-linecap='butt' stroke-linejoin='round' d='M0 26.85 C27 26.68 41 24.55 56 25.95 C73 27.65 85 26.55 96 26.35'/%3E%3C/svg%3E");
+}
+
+.post-card:hover .post-card-title-text,
+.post-card.post-card--kbd-focus .post-card-title-text {
+  background-repeat: repeat-x;
+  background-size: 3.95em auto;
+  background-position: left calc(100% - 0.02em - 1px);
 }
 
 .post-card-inner {
@@ -522,7 +561,35 @@ a.toolbar-btn.home-btn {
   line-height: 1.38;
   color: var(--fg);
   min-width: 0;
-  transition: color 0.18s ease;
+}
+
+.post-card-title-text {
+  display: inline;
+  /** 为下划线留出字腹以下的空隙，避免与笔画重叠 */
+  padding-bottom: 0.48em;
+}
+
+.post-card-title-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.06em;
+  vertical-align: -0.18em;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.post-card-title-text + .post-card-title-badge {
+  margin-left: 0.18em;
+}
+
+.post-card-title-icon {
+  display: block;
+  width: 1.22em;
+  height: 1.22em;
+  max-width: 22px;
+  max-height: 22px;
+  object-fit: contain;
 }
 
 .post-card-meta {

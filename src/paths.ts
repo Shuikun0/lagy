@@ -1,7 +1,7 @@
 /** 与 `import.meta.env.BASE_URL` 一致的站内路径（兼容 `/` 与 `/repo`） */
 export function getHomeHref(baseUrl: string): string {
   const b = (baseUrl || '/').replace(/\/?$/, '/');
-  return `${b}home/`;
+  return b;
 }
 
 export function getPostHref(baseUrl: string, postId: string): string {

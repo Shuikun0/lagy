@@ -20,8 +20,12 @@ const siteName = SITE_NAME;
 const { title, description, headerVariant = 'home', articleTitle, homeLastUpdatedLine, splash = false } = Astro.props;
 const pageTitle = title === siteName ? SITE_TAB_TITLE : `${title} · ${SITE_TAB_TITLE}`;
 const baseUrl = import.meta.env.BASE_URL;
+const scriptBase = (baseUrl || '/').replace(/\/?$/, '/');
 const homeHref = getHomeHref(baseUrl);
 const homeLogoSrc = getPublicHref(baseUrl, 'images/homelogo.png');
+const iconSunSrc = getPublicHref(baseUrl, 'images/icon_sun.png');
+const iconMoonSrc = getPublicHref(baseUrl, 'images/icon_moon.png');
+const iconBackSrc = getPublicHref(baseUrl, 'images/icon_back.png');
 const faviconBase = (baseUrl || '/').replace(/\/?$/, '/');
 /** public/favicon.png：在 macOS 上用 Apple Color Emoji 离线渲染的 📟（脚本 scripts/render-ios-favicon.swift） */
 const faviconHref = `${faviconBase}favicon.png`;
@@ -61,25 +65,24 @@ const isSplash = splash === true;
         isSplash ? (
           <div class="splash-toolbar">
             <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
-              <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
-                <path
-                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                />
-              </svg>
-              <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                  stroke="currentColor"
-                  stroke-width="1.75"
-                  fill="none"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+              <img
+                class="theme-toggle-icon theme-toggle-icon--sun toolbar-icon--match-fg"
+                src={iconSunSrc}
+                alt=""
+                width="29"
+                height="29"
+                decoding="async"
+                draggable={false}
+              />
+              <img
+                class="theme-toggle-icon theme-toggle-icon--moon toolbar-icon--match-fg"
+                src={iconMoonSrc}
+                alt=""
+                width="29"
+                height="29"
+                decoding="async"
+                draggable={false}
+              />
             </button>
           </div>
         ) : (
@@ -110,41 +113,39 @@ const isSplash = splash === true;
               </h1>
             ) : (
               <a class="toolbar-btn home-btn" href={homeHref} aria-label={`返回${siteName}`}>
-                <!-- 左箭头 + 横杠；几何关于 (12,12) 对称，略大于 20×20 主题图标 -->
-                <svg class="toolbar-back-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M17 12H7m0 0 5-5M7 12l5 5"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
+                <img
+                  class="toolbar-back-icon toolbar-icon--match-fg"
+                  src={iconBackSrc}
+                  alt=""
+                  width="30"
+                  height="30"
+                  decoding="async"
+                  draggable={false}
+                />
               </a>
             )
           }
         </div>
         <div class="site-header-toolbar">
           <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
-            <svg class="theme-toggle-icon theme-toggle-icon--sun" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.75" fill="none" />
-              <path
-                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-              />
-            </svg>
-            <svg class="theme-toggle-icon theme-toggle-icon--moon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                stroke="currentColor"
-                stroke-width="1.75"
-                fill="none"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+            <img
+              class="theme-toggle-icon theme-toggle-icon--sun toolbar-icon--match-fg"
+              src={iconSunSrc}
+              alt=""
+              width="29"
+              height="29"
+              decoding="async"
+              draggable={false}
+            />
+            <img
+              class="theme-toggle-icon theme-toggle-icon--moon toolbar-icon--match-fg"
+              src={iconMoonSrc}
+              alt=""
+              width="29"
+              height="29"
+              decoding="async"
+              draggable={false}
+            />
           </button>
         </div>
       </header>
@@ -161,15 +162,20 @@ const isSplash = splash === true;
         <slot />
       </div>
     </div>
-    <!-- 晚于 head 中外链 CSS：在 prefers-reduced-motion 下仍播放本站动画，并盖过 Astro viewtransitions.css 的 animation:none -->
+    <!-- 加密文章解锁依赖：须全局加载，以便 ClientRouter 软导航后仍能解密；逻辑在 enc-gate.js 内绑定 astro:page-load -->
+    <script is:inline src={`${scriptBase}js/article-crypto.js`}></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+    <script is:inline src={`${scriptBase}js/enc-gate.js`}></script>
+    <!-- 晚于 head 中外链 CSS：在 prefers-reduced-motion 下仍播放本站动画，并盖过 Astro viewtransitions.css 的 animation:none（过渡样式见 global.css blog-vt-*） -->
     <style is:inline>
       @media (prefers-reduced-motion), (prefers-reduced-motion: reduce) {
         .page-main {
-          animation: page-main-reveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+          animation: page-main-reveal 0.28s ease-out forwards !important;
         }
         body.page-home .page-main,
         body.page-welcome .page-main {
-          animation-delay: 0.07s !important;
+          animation-delay: 0.04s !important;
         }
         .home-last-updated:not([data-intro-done]) {
           animation: home-last-updated-dismiss 1.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
@@ -177,27 +183,21 @@ const isSplash = splash === true;
         .enc-gate-shake-root.enc-gate-shake {
           animation: enc-gate-shake 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
         }
-        ::view-transition-old(*) {
-          animation: astroFadeOut 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
-        }
-        ::view-transition-new(*) {
-          animation: astroFadeIn 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
-        }
         html[data-astro-transition-fallback='old'] [data-astro-transition-scope],
         html[data-astro-transition-fallback='old'][data-astro-transition-scope] {
-          animation: astroFadeOut 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+          animation: blog-vt-fade-out 200ms ease-out both !important;
         }
         html[data-astro-transition-fallback='new'] [data-astro-transition-scope],
         html[data-astro-transition-fallback='new'][data-astro-transition-scope] {
-          animation: astroFadeIn 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+          animation: blog-vt-fade-in 200ms ease-out both !important;
         }
         html[data-astro-transition='back'][data-astro-transition-fallback='old'] [data-astro-transition-scope],
         html[data-astro-transition='back'][data-astro-transition-fallback='old'][data-astro-transition-scope] {
-          animation: astroFadeOut 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+          animation: blog-vt-fade-out 200ms ease-out both !important;
         }
         html[data-astro-transition='back'][data-astro-transition-fallback='new'] [data-astro-transition-scope],
         html[data-astro-transition='back'][data-astro-transition-fallback='new'][data-astro-transition-scope] {
-          animation: astroFadeIn 180ms cubic-bezier(0.76, 0, 0.24, 1) both !important;
+          animation: blog-vt-fade-in 200ms ease-out both !important;
         }
       }
     </style>
