@@ -35,9 +35,9 @@ function listPostTouchDate(p: (typeof allHomePosts)[number]) {
 <Base title={SITE_NAME} headerVariant="home">
   {
     posts.length === 0 ? (
-      <p class="post-card-line">还没有文章。在 <code>src/content/blog/</code> 下添加 Markdown 后即可在此列出。</p>
+      <p class="post-card-line home-stream-empty">还没有文章。在 <code>src/content/blog/</code> 下添加 Markdown 后即可在此列出。</p>
     ) : (
-      <ul class="post-list">
+      <ul class="post-list home-stream">
         {posts.map((post) => {
           const touchDate = listPostTouchDate(post);
           return (
