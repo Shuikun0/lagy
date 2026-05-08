@@ -2,11 +2,10 @@ import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 import { SITE_TAB_TITLE } from '../site';
+import { compareHomePosts } from '../lib/blog-list-order';
 
 export const GET: APIRoute = async ({ site }) => {
-  const posts = (await getCollection('blog', ({ data }) => data.draft !== true)).sort(
-    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-  );
+  const posts = (await getCollection('blog', ({ data }) => data.draft !== true)).sort(compareHomePosts);
 
   if (!site) {
     throw new Error('请在 astro.config.mjs 中设置 site（你的域名），RSS 需要正确的绝对链接');

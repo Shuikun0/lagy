@@ -64,4 +64,12 @@ collections:
           required: false,
         }
       - { label: 草稿（生产构建不展示）, name: draft, widget: boolean, default: false, required: false }
+      - {
+          label: '同日排序序号（可选）',
+          name: dateOrder,
+          widget: number,
+          value_type: int,
+          required: false,
+          hint: '与发布日同一天时：数字越小越靠前；不写视为 0。不影响置顶逻辑。',
+        }
       - { label: 正文, name: body, widget: markdown }

@@ -478,6 +478,12 @@
       .pinned-wrap.hidden {
         display: none;
       }
+      .meta-inline.meta-inline-full-row {
+        flex-basis: 100%;
+      }
+      #dateOrder {
+        max-width: 8rem;
+      }
       #manualDateWrap .field-input {
         padding: 8px 10px;
       }
@@ -619,7 +625,7 @@
           <div id="importDecryptPanel" class="import-decrypt-panel">
             <label class="field-label" for="importDecryptPass">加密暗号</label>
             <input
-              type="password"
+              type="text"
               id="importDecryptPass"
               class="field-input"
               autocomplete="new-password"
@@ -774,6 +780,25 @@
                   autocomplete="off"
                 />
               </div>
+              <label
+                class="date-order-label"
+                for="dateOrder"
+                title="发布日（pubDate）相同时：数字越小在列表越靠前；默认 0"
+                >同日序号</label
+              >
+              <input
+                type="number"
+                id="dateOrder"
+                class="field-input"
+                placeholder="0"
+                title="写入 frontmatter 的 dateOrder；与发布日同一天时越小越靠前"
+                name="x_date_order"
+                step="1"
+                autocomplete="off"
+                value="0"
+              />
+            </div>
+            <div class="meta-inline meta-inline-full-row">
               <label title="勾选时文章不会出现在正式版站点列表里，等你改完再取消勾选并重新部署"
                 ><input type="checkbox" id="draft" /> 先别上线（草稿）</label
               >
@@ -839,6 +864,12 @@
         }
       }
 
+      function pushDateOrderLine(lines, data) {
+        if (typeof data.dateOrder === 'number' && !Number.isNaN(data.dateOrder)) {
+          lines.push('dateOrder: ' + data.dateOrder);
+        }
+      }
+
       function buildMarkdown(data) {
         const lines = [
           '---',
@@ -849,6 +880,7 @@
           'draft: ' + (data.draft ? 'true' : 'false'),
         ];
         pushPinnedLine(lines, data);
+        pushDateOrderLine(lines, data);
         lines.push('---', '', (data.body || '').replace(/\s+$/, ''), '');
         return lines.join('\n');
       }
@@ -876,6 +908,7 @@
             'encrypted: true',
           ];
           pushPinnedLine(lines, data);
+          pushDateOrderLine(lines, data);
           lines.push('passwordHint: ' + yamlScalar(hintStr));
           pushOptionalDecryptedTitle(lines);
           lines.push('cipherIterations: ' + pkg.cipherIterations);
@@ -1121,7 +1154,7 @@
 
           function tryDecrypt(e) {
             if (e && e.preventDefault) e.preventDefault();
-            var pwd = passEl.value.trim();
+            var pwd = passEl.value;
             if (!pwd) {
               errEl.textContent = '请输入暗号';
               errEl.classList.add('show');
@@ -1189,6 +1222,14 @@
         document.getElementById('pinnedEnabled').checked = hasPinned;
         document.getElementById('pinned').value = hasPinned ? String(Math.trunc(Number(fm.pinned))) : '';
         syncPinnedUI();
+
+        var doRaw = fm.dateOrder;
+        var hasDO =
+          doRaw != null &&
+          doRaw !== '' &&
+          typeof doRaw !== 'boolean' &&
+          !isNaN(Number(doRaw));
+        document.getElementById('dateOrder').value = hasDO ? String(Math.trunc(Number(doRaw))) : '0';
 
         var slugFromFm = fm.slug != null ? String(fm.slug).trim() : '';
         slugEl.value = slugFromFm || (filenameStem ? filenameStem.replace(/[^a-z0-9-]/gi, '').toLowerCase() : '');
@@ -1488,6 +1529,18 @@
           pinnedNum = parseInt(pinnedRaw, 10);
         }
 
+        var dateOrderRaw = document.getElementById('dateOrder').value.trim();
+        var dateOrderNum = 0;
+        if (dateOrderRaw === '') {
+          dateOrderNum = 0;
+        } else if (!/^-?\d+$/.test(dateOrderRaw)) {
+          err.textContent = '同日序号须为整数';
+          err.classList.add('show');
+          return null;
+        } else {
+          dateOrderNum = parseInt(dateOrderRaw, 10);
+        }
+
         return {
           slug: slug,
           title: title,
@@ -1495,6 +1548,7 @@
           pubDate: pubDate,
           draft: document.getElementById('draft').checked,
           pinned: pinnedNum,
+          dateOrder: dateOrderNum,
           body: bodyEl.value,
         };
       }

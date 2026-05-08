@@ -14,6 +14,8 @@ const blog = defineCollection({
     draft: z.boolean().optional(),
     /** 置顶权重：数字越小越靠前；不写则按日期排序 */
     pinned: z.number().int().optional(),
+    /** 与 pubDate 同一天时的并列排序：越小越靠前；省略视为 0 */
+    dateOrder: z.number().int().optional(),
     /** Decap CMS 用于文件名的 slug，可省略（由文件名决定 URL） */
     slug: z.string().optional(),
     /** 正文已加密（PBKDF2 + AES-GCM），解密在浏览器完成 */
