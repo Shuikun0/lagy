@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 import { SITE_NAME } from '../site';
 import { getPostHref, getPublicHref } from '../paths';
+import { compareHomePosts } from '../lib/blog-list-order';
 
 const baseUrl = import.meta.env.BASE_URL;
 const iconLockSrc = getPublicHref(baseUrl, 'images/icon_lock.png');
@@ -19,47 +20,35 @@ function isListEncrypted(post: (typeof allHomePosts)[number]) {
   );
 }
 
-function compareHomePosts<T extends { data: { pinned?: number; pubDate: Date } }>(a: T, b: T) {
-  const ap = a.data.pinned;
-  const bp = b.data.pinned;
-  const aPinned = typeof ap === 'number';
-  const bPinned = typeof bp === 'number';
-  if (aPinned && bPinned && ap !== bp) return ap - bp;
-  if (aPinned && !bPinned) return -1;
-  if (!aPinned && bPinned) return 1;
-  return b.data.pubDate.valueOf() - a.data.pubDate.valueOf();
-}
-
 const posts = [...allHomePosts].sort(compareHomePosts);
 
 function formatListDate(d: Date) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function touchMs(p: (typeof allHomePosts)[0]) {
-  return (p.data.updatedDate ?? p.data.pubDate).valueOf();
+function listPostTouchDate(p: (typeof allHomePosts)[number]) {
+  return p.data.updatedDate ?? p.data.pubDate;
 }
 
-const latestTouched =
-  allHomePosts.length > 0 ? allHomePosts.reduce((a, b) => (touchMs(b) > touchMs(a) ? b : a)) : null;
-const homeLastUpdatedLine = latestTouched
-  ? `最后更新于${formatListDate(latestTouched.data.updatedDate ?? latestTouched.data.pubDate)}`
-  : undefined;
 ---
 
-<Base title={SITE_NAME} headerVariant="home" homeLastUpdatedLine={homeLastUpdatedLine}>
+<Base title={SITE_NAME} headerVariant="home">
   {
     posts.length === 0 ? (
       <p class="post-card-line">还没有文章。在 <code>src/content/blog/</code> 下添加 Markdown 后即可在此列出。</p>
     ) : (
       <ul class="post-list">
-        {posts.map((post) => (
+        {posts.map((post) => {
+          const touchDate = listPostTouchDate(post);
+          return (
           <li>
-            <a class="post-card" href={getPostHref(baseUrl, post.id)}>
+            <div class="post-card">
               <div class="post-card-inner">
-                <div class="post-card-row">
+                <div class="post-card-heading-block">
                   <h2 class="post-card-title">
-                    <span class="post-card-title-text">{post.data.title}</span>
+                    <a class="post-card-link" href={getPostHref(baseUrl, post.id)}>
+                      <span class="post-card-title-text">{post.data.title}</span>
+                    </a>
                     {isListEncrypted(post) ? (
                       <span class="post-card-title-badge" aria-label="加密">
                         <img
@@ -89,14 +78,15 @@ const homeLastUpdatedLine = latestTouched
                     {import.meta.env.DEV && post.data.draft ? <span class="post-card-draft">草稿</span> : null}
                   </h2>
                   <p class="post-card-meta post-card-date">
-                    <time datetime={post.data.pubDate.toISOString()}>{formatListDate(post.data.pubDate)}</time>
+                    <time datetime={touchDate.toISOString()}>{formatListDate(touchDate)}</time>
                   </p>
                 </div>
                 {post.data.listLine ? <p class="post-card-line">{post.data.listLine}</p> : null}
               </div>
-            </a>
+            </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     )
   }

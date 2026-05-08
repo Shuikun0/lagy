@@ -271,6 +271,78 @@
         color: var(--muted) !important;
         border-left-color: var(--outline-variant) !important;
       }
+      .import-decrypt-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        box-sizing: border-box;
+        background: color-mix(in srgb, var(--bg) 88%, #000);
+        -webkit-backdrop-filter: blur(2px);
+        backdrop-filter: blur(2px);
+      }
+      .import-decrypt-overlay[hidden] {
+        display: none !important;
+      }
+      .import-decrypt-card {
+        width: 100%;
+        max-width: 26rem;
+        padding: 1.25rem 1.35rem 1.35rem;
+        border-radius: 8px;
+        background: var(--surface);
+        border: 1px solid color-mix(in srgb, var(--outline-variant) 70%, transparent);
+        box-shadow: 0 8px 32px color-mix(in srgb, var(--text) 12%, transparent);
+      }
+      .import-decrypt-card h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .import-decrypt-lede {
+        margin: 0 0 1rem;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+      .import-decrypt-hint-block {
+        margin-bottom: 1rem;
+      }
+      .import-decrypt-hint-block .field-label {
+        display: block;
+        margin-bottom: 0.35rem;
+      }
+      .import-decrypt-hint-pre {
+        margin: 0;
+        padding: 10px 12px;
+        max-height: 9rem;
+        overflow: auto;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--text);
+        background: color-mix(in srgb, var(--bg) 65%, var(--surface));
+        border: 1px solid var(--outline-variant);
+        border-radius: 4px;
+      }
+      .import-decrypt-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 1rem;
+      }
+      #importDecryptErr {
+        margin-top: 10px;
+      }
+      .import-decrypt-panel {
+        display: block;
+      }
       .meta {
         margin-top: 20px;
         display: flex;
@@ -528,6 +600,44 @@
         <div class="markdown-body preview-md" id="fullscreenPreview"></div>
       </div>
 
+      <div id="importDecryptOverlay" class="import-decrypt-overlay" hidden>
+        <div
+          class="import-decrypt-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="importDecryptTitle"
+        >
+          <h2 id="importDecryptTitle">导入加密文章</h2>
+          <p class="import-decrypt-lede">
+            请输入暗号以解密正文。解密成功后正文将写入编辑器；导出时若仍勾选「加密正文」，请填写暗号（导入成功后会填入下方加密暗号框）。
+          </p>
+          <div class="import-decrypt-hint-block">
+            <span class="field-label">密码提示（来自文件）</span>
+            <pre id="importDecryptHintDisplay" class="import-decrypt-hint-pre"></pre>
+          </div>
+          <!-- 不可嵌套在 .editor-shell 的 form 内：嵌套 form 会被解析丢弃，导致脚本 getElementById 为 null -->
+          <div id="importDecryptPanel" class="import-decrypt-panel">
+            <label class="field-label" for="importDecryptPass">加密暗号</label>
+            <input
+              type="password"
+              id="importDecryptPass"
+              class="field-input"
+              autocomplete="new-password"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              data-lpignore="true"
+              data-1p-ignore="true"
+            />
+            <p class="err" id="importDecryptErr"></p>
+            <div class="import-decrypt-actions">
+              <button type="button" class="btn btn-outline" id="importDecryptCancel">取消</button>
+              <button type="button" class="btn btn-filled" id="importDecryptConfirm">解密并导入</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="meta">
         <label
           class="enc-toggle-label"
@@ -613,8 +723,8 @@
               type="text"
               id="slug"
               class="field-input"
-              placeholder="英文路径（可留空，导出时再自动生成）"
-              title="导出为 此处.md；网址一般为 …/blog/此处/。仅小写英文、数字、连字符。"
+              placeholder="路径（可留空 → 发布日期 + 标题拼音）"
+              title="导出为 文件名.md；网址一般为 …/blog/文件名/。留空时用「YYYY-MM-DD-标题拼音」。仅小写英文、数字、连字符。"
               name="x_slug"
               autocomplete="off"
               autocorrect="off"
@@ -693,6 +803,7 @@
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.28.1/dist/index.js"></script>
     <script>
       const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
       const THEME_KEY = 'post-editor-theme';
@@ -742,39 +853,17 @@
         return lines.join('\n');
       }
 
-      function buildMarkdownEncryptedPreserve(data, bundle, hintStr) {
-        var lines = [
-          '---',
-          'title: ' + yamlScalar(data.title),
-          'description: ' + yamlScalar(data.description),
-          'pubDate: ' + data.pubDate,
-          'slug: ' + data.slug,
-          'draft: ' + (data.draft ? 'true' : 'false'),
-          'encrypted: true',
-        ];
-        pushPinnedLine(lines, data);
-        lines.push('passwordHint: ' + yamlScalar(hintStr));
-        pushOptionalDecryptedTitle(lines);
-        lines.push('cipherIterations: ' + bundle.cipherIterations);
-        lines.push('cipherText: ' + yamlScalar(bundle.cipherText));
-        lines.push('cipherIv: ' + yamlScalar(bundle.cipherIv));
-        lines.push('cipherSalt: ' + yamlScalar(bundle.cipherSalt));
-        lines.push('---', '', ENC_BODY_PLACEHOLDER, '');
-        return lines.join('\n');
-      }
-
       async function buildMarkdownMaybeEncrypted(data) {
         var encOn = document.getElementById('encEnabled').checked;
         var pwd = encOn ? document.getElementById('encPassword').value.trim() : '';
         var hintStr = document.getElementById('encHint').value.trim();
 
-        if (importedCipherBundle && !encOn) {
-          throw new Error('当前为加密文稿导入：请先勾选「加密正文」再导出。');
+        if (encOn && !pwd) {
+          throw new Error('已勾选「加密正文」：请填写加密暗号后再导出或复制。');
         }
 
         if (pwd && encOn) {
           if (!window.articleCrypto) throw new Error('加密脚本未加载，请检查 ../js/article-crypto.js');
-          importedCipherBundle = null;
           var plain = (data.body || '').replace(/\s+$/, '');
           var pkg = await window.articleCrypto.encrypt(plain, pwd);
           var lines = [
@@ -795,14 +884,6 @@
           lines.push('cipherSalt: ' + yamlScalar(pkg.cipherSalt));
           lines.push('---', '', ENC_BODY_PLACEHOLDER, '');
           return lines.join('\n');
-        }
-
-        if (importedCipherBundle && encOn) {
-          var bodyNow = (data.body || '').replace(/\s+$/, '');
-          if (bodyNow !== importedCipherBundle.bodySnapshot) {
-            throw new Error('加密文章的正文已改动：请填写暗号以重新加密后再导出');
-          }
-          return buildMarkdownEncryptedPreserve(data, importedCipherBundle, hintStr);
         }
 
         return buildMarkdown(data);
@@ -851,8 +932,6 @@
 
       var titleEl = document.getElementById('title');
       var slugEl = document.getElementById('slug');
-      /** 导入的加密文：无暗号导出时保留密文；正文变动则需填写暗号重新加密 */
-      var importedCipherBundle = null;
 
       var encHintEl = document.getElementById('encHint');
       var encHintStackEl = document.getElementById('encHintStack');
@@ -886,28 +965,92 @@
         return 'p-' + s;
       }
 
-      function ensureSlugForExport() {
+      var SLUG_TOTAL_MAX = 160;
+
+      /** 标题 → 仅 a-z0-9-；依赖 pinyin-pro（失败则尽量保留拉丁字母） */
+      function slugifyTitleToAscii(title) {
+        var raw = String(title || '').trim();
+        if (!raw) return '';
+        var py = '';
+        try {
+          var PP = typeof globalThis !== 'undefined' ? globalThis.pinyinPro : undefined;
+          if (PP && typeof PP.pinyin === 'function') {
+            py = PP.pinyin(raw, {
+              toneType: 'none',
+              type: 'string',
+              separator: ' ',
+              v: true,
+            });
+          }
+        } catch (_) {}
+        if (!py) py = raw;
+        py = py.toLowerCase();
+        py = py.replace(/[^a-z0-9]+/g, '-');
+        py = py.replace(/^-+|-+$/g, '');
+        py = py.replace(/-{2,}/g, '-');
+        return py;
+      }
+
+      /**
+       * @param {string} pubDateYmd 已校验的 YYYY-MM-DD（与 frontmatter pubDate 一致）
+       */
+      function ensureSlugForExport(pubDateYmd) {
         var cur = slugEl.value.trim();
         if (cur) return cur;
-        var slug = fallbackSlug();
+        var datePart = pubDateYmd;
+        if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+          datePart = localDateYMD(new Date());
+        }
+        var titlePart = slugifyTitleToAscii(titleEl.value);
+        if (!titlePart) titlePart = fallbackSlug().replace(/^p-/, '');
+        var slug = datePart + '-' + titlePart;
+        if (slug.length > SLUG_TOTAL_MAX) slug = slug.slice(0, SLUG_TOTAL_MAX).replace(/-+$/g, '');
         slugEl.value = slug;
         return slug;
       }
 
+      /**
+       * 按行解析 frontmatter：结束符须为单独一行 `---`（可有行尾空白）。
+       * 避免用 [\s\S]*? 匹配到 YAML 块标量或正文中出现的第一个 `\n---\n`，
+       * 否则会把 passwordHint / cipher 等截进「正文」、暗号提示看起来像导入进正文区。
+       */
       function splitFrontmatter(raw) {
         raw = String(raw || '').replace(/^\uFEFF/, '');
-        var m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-        if (!m) return { fm: {}, body: raw };
+        var lines = raw.split(/\r?\n/);
+        if (!lines.length || !/^---\s*$/.test(lines[0])) {
+          return { fm: {}, body: raw };
+        }
+        var end = -1;
+        for (var i = 1; i < lines.length; i++) {
+          if (/^---\s*$/.test(lines[i])) {
+            end = i;
+            break;
+          }
+        }
+        if (end === -1) {
+          return { fm: {}, body: raw };
+        }
+        var yamlStr = lines.slice(1, end).join('\n');
+        var body = lines.slice(end + 1).join('\n');
         var fm = {};
         try {
           var Y = typeof jsyaml !== 'undefined' ? jsyaml : typeof jsYAML !== 'undefined' ? jsYAML : null;
           if (!Y || !Y.load) throw new Error('js-yaml 未加载');
-          fm = Y.load(m[1]);
+          fm = Y.load(yamlStr);
           if (fm == null || typeof fm !== 'object') fm = {};
         } catch (e) {
           throw new Error('frontmatter 解析失败');
         }
-        return { fm: fm, body: m[2] };
+        return { fm: fm, body: body };
+      }
+
+      /**
+       * 导出格式在第二个 --- 与正文之间有一行空行（Markdown 惯例），导入时不应算进正文编辑区。
+       */
+      function normalizeBodyAfterFrontmatter(body) {
+        return String(body || '')
+          .replace(/^\r?\n/, '')
+          .replace(/\s+$/, '');
       }
 
       function coercePubDateInput(v) {
@@ -926,10 +1069,119 @@
         if (!en.checked) inp.value = '';
       }
 
-      function applyImportedMarkdown(text, filenameStem) {
+      /**
+       * 导入含 cipher* 的文稿时：先弹层输入暗号，解密成功后再 resolve；取消则 resolve(null)。
+       */
+      function waitForImportDecrypt(fm, ciParsed) {
+        return new Promise(function (resolve) {
+          var overlay = document.getElementById('importDecryptOverlay');
+          var passEl = document.getElementById('importDecryptPass');
+          var errEl = document.getElementById('importDecryptErr');
+          var hintPre = document.getElementById('importDecryptHintDisplay');
+          var cancelBtn = document.getElementById('importDecryptCancel');
+          var confirmBtn = document.getElementById('importDecryptConfirm');
+          if (!overlay || !passEl || !errEl || !hintPre || !cancelBtn || !confirmBtn) {
+            throw new Error('导入解密界面加载异常，请刷新页面后重试');
+          }
+
+          var hintStr = fm.passwordHint != null ? String(fm.passwordHint).trim() : '';
+          hintPre.textContent = hintStr || '（无 passwordHint 字段）';
+          passEl.value = '';
+          errEl.textContent = '';
+          errEl.classList.remove('show');
+
+          function finish(result) {
+            document.removeEventListener('keydown', onEsc);
+            cancelBtn.removeEventListener('click', onCancel);
+            confirmBtn.removeEventListener('click', tryDecrypt);
+            passEl.removeEventListener('keydown', onPassKeydown);
+            overlay.hidden = true;
+            document.body.style.overflow = '';
+            passEl.value = '';
+            errEl.textContent = '';
+            errEl.classList.remove('show');
+            resolve(result);
+          }
+
+          function onEsc(e) {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            finish(null);
+          }
+
+          function onCancel() {
+            finish(null);
+          }
+
+          function onPassKeydown(e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            tryDecrypt(e);
+          }
+
+          function tryDecrypt(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            var pwd = passEl.value.trim();
+            if (!pwd) {
+              errEl.textContent = '请输入暗号';
+              errEl.classList.add('show');
+              return;
+            }
+            if (!window.articleCrypto) {
+              errEl.textContent = '加密脚本未加载，请检查 ../js/article-crypto.js';
+              errEl.classList.add('show');
+              return;
+            }
+            errEl.textContent = '';
+            errEl.classList.remove('show');
+            window.articleCrypto
+              .decrypt(String(fm.cipherText), String(fm.cipherIv), String(fm.cipherSalt), pwd, ciParsed)
+              .then(function (plain) {
+                finish({ pwd: pwd, plain: plain });
+              })
+              .catch(function () {
+                errEl.textContent = '暗号不正确或密文已损坏';
+                errEl.classList.add('show');
+              });
+          }
+
+          document.addEventListener('keydown', onEsc);
+          cancelBtn.addEventListener('click', onCancel);
+          confirmBtn.addEventListener('click', tryDecrypt);
+          passEl.addEventListener('keydown', onPassKeydown);
+
+          overlay.hidden = false;
+          document.body.style.overflow = 'hidden';
+          requestAnimationFrame(function () {
+            passEl.focus();
+          });
+        });
+      }
+
+      async function applyImportedMarkdown(text, filenameStem) {
         var parsed = splitFrontmatter(text);
         var fm = parsed.fm;
-        importedCipherBundle = null;
+
+        var isEnc = fm.encrypted === true && fm.cipherText && fm.cipherIv && fm.cipherSalt;
+        var plainBody = normalizeBodyAfterFrontmatter(parsed.body);
+        var encPwdAfterImport = '';
+
+        if (isEnc) {
+          if (!window.articleCrypto) {
+            throw new Error('加密脚本未加载，无法导入加密文章');
+          }
+          var ciRaw = fm.cipherIterations;
+          var ciParsed =
+            ciRaw != null && !isNaN(Number(ciRaw)) && Number(ciRaw) > 0
+              ? Math.floor(Number(ciRaw))
+              : (window.articleCrypto && window.articleCrypto.PBKDF2_ITERATIONS) || 600000;
+          var dec = await waitForImportDecrypt(fm, ciParsed);
+          if (dec == null) {
+            throw new Error('已取消导入');
+          }
+          plainBody = String(dec.plain || '').replace(/\s+$/, '');
+          encPwdAfterImport = dec.pwd != null ? String(dec.pwd) : '';
+        }
 
         titleEl.value = fm.title != null ? String(fm.title) : '';
         document.getElementById('description').value = fm.description != null ? String(fm.description) : '';
@@ -957,27 +1209,16 @@
         encHintEl.value = DEFAULT_PASSWORD_HINT;
         encEnabledEl.checked = false;
 
-        bodyEl.value = parsed.body.replace(/\s+$/, '');
+        bodyEl.value = plainBody;
         autoResizeBody();
 
-        if (fm.encrypted === true && fm.cipherText && fm.cipherIv && fm.cipherSalt) {
-          var ciRaw = fm.cipherIterations;
-          var ciParsed =
-            ciRaw != null && !isNaN(Number(ciRaw)) && Number(ciRaw) > 0
-              ? Math.floor(Number(ciRaw))
-              : (window.articleCrypto && window.articleCrypto.PBKDF2_ITERATIONS) || 600000;
-          importedCipherBundle = {
-            cipherText: String(fm.cipherText),
-            cipherIv: String(fm.cipherIv),
-            cipherSalt: String(fm.cipherSalt),
-            cipherIterations: ciParsed,
-            bodySnapshot: bodyEl.value.replace(/\s+$/, ''),
-          };
+        if (isEnc) {
           var importedHint = fm.passwordHint != null ? String(fm.passwordHint).trim() : '';
           encHintEl.value = importedHint || DEFAULT_PASSWORD_HINT;
           document.getElementById('decryptedTitle').value =
             fm.decryptedTitle != null ? String(fm.decryptedTitle) : '';
           encEnabledEl.checked = true;
+          document.getElementById('encPassword').value = encPwdAfterImport;
         }
         syncEncPanelUI();
       }
@@ -1215,17 +1456,17 @@
           return null;
         }
 
-        var slug = ensureSlugForExport();
-
-        if (!SLUG_RE.test(slug)) {
-          err.textContent = '英文文件名只能用小写字母、数字和连字符';
+        var pubDate = getPubDateForExport();
+        if (!pubDate || !/^\d{4}-\d{2}-\d{2}$/.test(pubDate)) {
+          err.textContent = '日期无效';
           err.classList.add('show');
           return null;
         }
 
-        var pubDate = getPubDateForExport();
-        if (!pubDate || !/^\d{4}-\d{2}-\d{2}$/.test(pubDate)) {
-          err.textContent = '日期无效';
+        var slug = ensureSlugForExport(pubDate);
+
+        if (!SLUG_RE.test(slug)) {
+          err.textContent = '路径只能用小写字母、数字和连字符';
           err.classList.add('show');
           return null;
         }
@@ -1316,16 +1557,28 @@
         err.textContent = '';
         var reader = new FileReader();
         reader.onload = function () {
-          try {
-            var stem = file.name.replace(/\.(md|markdown)$/i, '');
-            applyImportedMarkdown(String(reader.result || ''), stem);
-            err.textContent = '已导入';
-            err.classList.add('show', 'ok');
-          } catch (ex) {
-            err.textContent = ex && ex.message ? ex.message : '导入失败';
-            err.classList.add('show');
-          }
-          input.value = '';
+          var stem = file.name.replace(/\.(md|markdown)$/i, '');
+          var raw = String(reader.result || '');
+          Promise.resolve(applyImportedMarkdown(raw, stem))
+            .then(function () {
+              err.textContent = '已导入';
+              err.classList.remove('show');
+              err.classList.add('show', 'ok');
+            })
+            .catch(function (ex) {
+              var msg = ex && ex.message ? ex.message : '导入失败';
+              if (msg === '已取消导入') {
+                err.textContent = '';
+                err.classList.remove('show', 'ok');
+                return;
+              }
+              err.textContent = msg;
+              err.classList.remove('ok');
+              err.classList.add('show');
+            })
+            .finally(function () {
+              input.value = '';
+            });
         };
         reader.onerror = function () {
           err.textContent = '读取文件失败';

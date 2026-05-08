@@ -1,4 +1,4 @@
-/* 布局与排版变量：两套主题共用，避免夜间模式下 var(--measure-wide) 未定义导致版面撑满屏宽 */
+/* 布局与排版变量：与 example/ 下保存的参考站点 CSS 对齐 */
 :root {
   --radius: 12px;
   --radius-sm: 8px;
@@ -9,9 +9,7 @@
   --measure-wide: 48rem;
   --tracking-tight: -0.02em;
   --blog-title-size: clamp(1.14rem, 3.4vw, 1.58rem);
-  /** 顶栏工具按钮尺寸（与占位一致，保证主页/文章主题按钮像素对齐） */
   --toolbar-hit: 2.25rem;
-  /** 顶栏轨道固定高度 ≥ logo 最大高度，两侧垂直居中一致 */
   --site-header-bar-height: 3.875rem;
 }
 
@@ -58,6 +56,7 @@ html {
   background: var(--bg);
   color: var(--fg);
   line-height: 1.65;
+  /** 参考站点 html font-size: 17px */
   font-size: 17px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -196,7 +195,7 @@ body.page-welcome .page-main {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 4%, transparent);
+  box-shadow: 0 1px color-mix(in srgb, var(--fg) 4%, transparent);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
@@ -210,7 +209,7 @@ body.page-welcome .page-main {
   color: var(--accent-hover);
 }
 
-/* —— Header：固定轨道高度，主页/文章右侧均为主题按钮 —— */
+/* —— Header：主页为 logo + 主题；文章页为左上「返回主页」+ 右侧主题 —— */
 .site-header {
   display: flex;
   align-items: center;
@@ -225,6 +224,40 @@ body.page-home .site-header {
   margin-bottom: 2.35rem;
 }
 
+/** 文章页：顶栏与标题、正文同一 measure 栏宽 */
+body.page-article .site-header {
+  max-width: var(--measure);
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/** 文章顶栏：与文末「上一篇」标签同语气；无悬停变色（覆盖全局 a:hover） */
+a.article-home-crumb {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--muted) 85%, var(--bg));
+  text-decoration: none;
+  border-bottom: none;
+  transition: none;
+}
+
+a.article-home-crumb:hover,
+a.article-home-crumb:active {
+  color: color-mix(in srgb, var(--muted) 85%, var(--bg));
+  border-bottom-color: transparent;
+}
+
+a.article-home-crumb:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 /** 主页列表 / 文章标题+正文：每次进入页面时淡入（无位移） */
 @keyframes page-main-reveal {
   from {
@@ -235,7 +268,13 @@ body.page-home .site-header {
   }
 }
 
+/**
+ * 参考 example：外层仅 .wrap 用 --measure-wide；.page-main 占满 wrap 内容宽（不与首页列表错栏）。
+ */
 .page-main {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   opacity: 0;
   animation: page-main-reveal 0.28s ease-out forwards;
 }
@@ -361,91 +400,14 @@ a.toolbar-btn.home-btn {
   -webkit-user-select: none;
 }
 
-.home-brand-cluster {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.45rem 0.75rem;
-  max-width: 100%;
-}
-
-@keyframes home-last-updated-dismiss {
-  0%,
-  38% {
-    opacity: 1;
-    max-width: 16rem;
-    margin: 0;
-    padding: 0;
-  }
-  50% {
-    opacity: 0;
-    max-width: 16rem;
-  }
-  100% {
-    opacity: 0;
-    max-width: 0;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
-  }
-}
-
-.home-last-updated {
-  display: inline-block;
-  min-width: 0;
-  align-self: flex-end;
-  font-family: var(--font-blog-name);
-  font-size: 0.72rem;
-  font-weight: 400;
-  color: color-mix(in srgb, var(--muted) 82%, var(--bg));
-  letter-spacing: 0.03em;
-  line-height: 1.35;
-  white-space: nowrap;
-  opacity: 0;
-  max-width: 0;
-  overflow: hidden;
-  vertical-align: bottom;
-  user-select: text;
-  -webkit-user-select: text;
-  transition: none;
-  /** 默认不再播放入场动画，避免移开 :hover 后 animation 重新套用又从 0% 播一遍（前几帧仍是 opacity:1 → 体感延迟） */
-  animation: none;
-}
-
-.home-last-updated:not([data-intro-done]) {
-  animation: home-last-updated-dismiss 1.85s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/** 仅 :hover；不用 :focus-within，否则点击 logo 后焦点仍在，鼠标移开文字还会卡住 */
-.home-brand-cluster:hover .home-last-updated,
-.home-brand-cluster:has(.home-logo-link:focus-visible) .home-last-updated {
-  animation: none !important;
-  opacity: 1;
-  max-width: min(16rem, 100%);
-  overflow: visible;
-  transition: none;
-}
-
-.home-logo-link {
+/** 主页 logo 容器：不可点击，无链接焦点环 */
+.home-logo-wrap {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  border-bottom: none;
-  text-decoration: none;
-  color: inherit;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.home-logo-link:active {
-  opacity: 1;
-}
-
-.home-logo-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
-  outline-offset: 3px;
-  border-radius: 4px;
 }
 
 /* —— Home logo：仅品牌图时略放大 —— */
@@ -481,7 +443,7 @@ a.toolbar-btn.home-btn {
   filter: brightness(0) invert(1);
 }
 
-/* —— Home post list —— */
+/* —— Home post list：仅标题文字可点；日期在标题下方，且默认不占位（按 i 显示） —— */
 .post-list {
   list-style: none;
   padding: 0;
@@ -498,46 +460,6 @@ a.toolbar-btn.home-btn {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
-  text-decoration: none;
-  color: inherit;
-  border-bottom-color: transparent;
-}
-
-.post-card:hover {
-  color: inherit;
-  border-bottom-color: transparent;
-  background: transparent;
-}
-
-.post-card:focus-visible {
-  outline: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
-  outline-offset: 2px;
-}
-
-.post-card.post-card--kbd-focus {
-  color: inherit;
-  border-bottom-color: transparent;
-  background: transparent;
-}
-
-/**
- * 手绘感下划线：较宽的 SVG 瓦片 repeat-x（波浪更疏），两端切线近乎水平 + butt 线帽减轻拼接感。
- */
-:root[data-theme='light'] .post-card:hover .post-card-title-text,
-:root[data-theme='light'] .post-card.post-card--kbd-focus .post-card-title-text {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%23141414' stroke-width='1.75' stroke-linecap='butt' stroke-linejoin='round' d='M0 26.85 C27 26.68 41 24.55 56 25.95 C73 27.65 85 26.55 96 26.35'/%3E%3C/svg%3E");
-}
-
-:root[data-theme='dark'] .post-card:hover .post-card-title-text,
-:root[data-theme='dark'] .post-card.post-card--kbd-focus .post-card-title-text {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%23f4f4f1' stroke-width='1.75' stroke-linecap='butt' stroke-linejoin='round' d='M0 26.85 C27 26.68 41 24.55 56 25.95 C73 27.65 85 26.55 96 26.35'/%3E%3C/svg%3E");
-}
-
-.post-card:hover .post-card-title-text,
-.post-card.post-card--kbd-focus .post-card-title-text {
-  background-repeat: repeat-x;
-  background-size: 3.95em auto;
-  background-position: left calc(100% - 0.02em - 1px);
 }
 
 .post-card-inner {
@@ -546,27 +468,79 @@ a.toolbar-btn.home-btn {
   gap: 0.28rem;
 }
 
-.post-card-row {
+.post-card-heading-block {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.14rem;
 }
 
 .post-card-title {
   margin: 0;
+  min-width: 0;
+  width: 100%;
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: var(--tracking-tight);
   line-height: 1.38;
   color: var(--fg);
-  min-width: 0;
+}
+
+/** 仅标题文案在链接内；徽章 / 草稿标在外 */
+.post-card-link {
+  display: inline;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: none;
+}
+
+.post-card-link:hover,
+.post-card-link:focus-visible {
+  color: inherit;
+  border-bottom-color: transparent;
+}
+
+.post-card-link:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.post-card-link.post-card-link--kbd-focus {
+  color: inherit;
+  border-bottom-color: transparent;
+}
+
+:root[data-theme='light'] .post-card-link:hover .post-card-title-text,
+:root[data-theme='light'] .post-card-link.post-card-link--kbd-focus .post-card-title-text,
+:root[data-theme='light'] .article-adjacent-link:hover .article-adjacent-title-text,
+:root[data-theme='light'] .article-adjacent-link.article-adjacent-link--kbd-focus .article-adjacent-title-text {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%23141414' stroke-width='1.75' stroke-linecap='butt' stroke-linejoin='round' d='M0 26.85 C27 26.68 41 24.55 56 25.95 C73 27.65 85 26.55 96 26.35'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='dark'] .post-card-link:hover .post-card-title-text,
+:root[data-theme='dark'] .post-card-link.post-card-link--kbd-focus .post-card-title-text,
+:root[data-theme='dark'] .article-adjacent-link:hover .article-adjacent-title-text,
+:root[data-theme='dark'] .article-adjacent-link.article-adjacent-link--kbd-focus .article-adjacent-title-text {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%23f4f4f1' stroke-width='1.75' stroke-linecap='butt' stroke-linejoin='round' d='M0 26.85 C27 26.68 41 24.55 56 25.95 C73 27.65 85 26.55 96 26.35'/%3E%3C/svg%3E");
+}
+
+.post-card-link:hover .post-card-title-text,
+.post-card-link.post-card-link--kbd-focus .post-card-title-text,
+.article-adjacent-link:hover .article-adjacent-title-text,
+.article-adjacent-link.article-adjacent-link--kbd-focus .article-adjacent-title-text {
+  background-repeat: repeat-x;
+  background-size: 3.95em auto;
+  background-position: left calc(100% - 0.02em - 1px);
 }
 
 .post-card-title-text {
   display: inline;
-  /** 为下划线留出字腹以下的空隙，避免与笔画重叠 */
   padding-bottom: 0.48em;
+}
+
+.post-card-link + .post-card-title-badge {
+  margin-left: 0.18em;
 }
 
 .post-card-title-badge {
@@ -579,7 +553,7 @@ a.toolbar-btn.home-btn {
   user-select: none;
 }
 
-.post-card-title-text + .post-card-title-badge {
+.post-card-title-badge + .post-card-title-badge {
   margin-left: 0.18em;
 }
 
@@ -593,13 +567,14 @@ a.toolbar-btn.home-btn {
 }
 
 .post-card-meta {
-  flex-shrink: 0;
   margin: 0;
+  padding: 0;
   font-family: var(--font-sans);
   font-size: 0.62rem;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
+  line-height: 1.35;
 }
 
 .post-card-meta time {
@@ -609,14 +584,18 @@ a.toolbar-btn.home-btn {
   opacity: 0.72;
 }
 
-/** 主页列表：发布时间默认隐藏，按 i 切换 body.show-post-dates 显示 */
-body.page-home:not(.show-post-dates) .post-card-date {
-  visibility: hidden;
+/** 主页默认不显示日期且不占布局空间；按 i 加上 .show-post-dates 后显示在标题下方 */
+body.page-home .post-card-date {
+  display: none;
+}
+
+body.page-home.show-post-dates .post-card-date {
+  display: block;
 }
 
 .post-card-line {
   margin: 0;
-  padding-right: 4.5rem;
+  padding-right: 0;
   font-size: 0.82rem;
   font-weight: 400;
   color: color-mix(in srgb, var(--muted) 75%, var(--bg));
@@ -690,6 +669,7 @@ article.prose blockquote {
   font-style: normal;
 }
 
+/** 正文 hr：通栏；文末导航区块靠更大上边距与之区分，不单靠装饰线 */
 article.prose hr {
   margin: 2.5rem 0;
   border: none;
@@ -737,6 +717,142 @@ article.prose img {
   height: auto;
   border-radius: var(--radius-sm);
   margin: 1.25rem 0;
+}
+
+/**
+ * 文末导航：在 article 之外，与正文 measure 对齐；顶沿弱分隔 + UI 向字体，避免读成正文延续。
+ */
+.article-doc-footer {
+  box-sizing: border-box;
+  max-width: var(--measure);
+  margin: 3.35rem auto 0;
+  padding-top: 2rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--muted) 82%, var(--fg-soft));
+}
+
+/** 相邻篇：无额外顶距（已由 .article-doc-footer padding-top 承担） */
+.article-adjacent {
+  margin-top: 0;
+  font-family: inherit;
+}
+
+.article-adjacent-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.1rem 1.5rem;
+  align-items: start;
+}
+
+.article-adjacent-cell {
+  min-width: 0;
+  display: flex;
+}
+
+.article-adjacent-cell--prev {
+  justify-content: flex-start;
+}
+
+.article-adjacent-cell--next {
+  justify-content: flex-end;
+}
+
+/**
+ * inline-flex 收窄点击区域；悬停手绘下划线与主页列表一致（仅装饰，字色保持 UI 灰）。
+ */
+.article-adjacent-link {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 100%;
+  vertical-align: top;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: none;
+}
+
+.article-adjacent-cell--next .article-adjacent-link {
+  align-items: flex-end;
+}
+
+.article-adjacent-link:hover,
+.article-adjacent-link:focus-visible {
+  color: inherit;
+  border-bottom-color: transparent;
+}
+
+.article-adjacent-link:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.article-adjacent-link.article-adjacent-link--kbd-focus {
+  color: inherit;
+  border-bottom-color: transparent;
+}
+
+.article-adjacent-label {
+  display: block;
+  flex-shrink: 0;
+  margin-bottom: 0.22rem;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--muted) 88%, var(--bg));
+}
+
+.article-adjacent-title-shell {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.article-adjacent-title-text {
+  display: inline;
+  padding-bottom: 0.42em;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--fg-soft) 88%, var(--muted));
+}
+
+.article-adjacent-empty {
+  display: block;
+}
+
+@media (max-width: 520px) {
+  .article-adjacent-inner {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .article-adjacent-cell--next {
+    justify-content: flex-start;
+  }
+
+  .article-adjacent-cell--next .article-adjacent-link {
+    align-items: flex-start;
+  }
+}
+
+/** 文末「返回主页」：在 .article-doc-footer 内，与相邻篇间距略收紧 */
+.article-doc-footer .article-foot-nav-home {
+  margin-block-end: 0;
+  margin-inline: 0;
+  margin-block-start: 0;
+}
+
+.article-doc-footer .article-adjacent + .article-foot-nav-home {
+  margin-block-start: 1.05rem;
 }
 
 /* —— Encrypted article unlock —— */
@@ -845,5 +961,234 @@ article.prose img {
 .enc-gate-err.is-fading-out {
   visibility: visible;
   transition: opacity 0.22s ease-out;
+}
+
+/* —— 主页：赛博朋克 2077 风格（仅首页；配色覆盖浅色/深色以保证观感一致） —— */
+@keyframes cp-home-scan-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(12px);
+  }
+}
+
+@keyframes cp-home-grid-shift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-40px, -40px);
+  }
+}
+
+@keyframes cp-home-edge-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 240, 255, 0.22),
+      0 0 24px rgba(255, 0, 85, 0.06);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 240, 255, 0.42),
+      0 0 32px rgba(255, 0, 85, 0.12);
+  }
+}
+
+html:has(body.page-home) {
+  color-scheme: dark;
+  --cp-neon-cyan: #00f0ff;
+  --cp-neon-mag: #ff2a6d;
+  --cp-neon-amber: #fcee0a;
+  --cp-deep: #050812;
+  --cp-panel: rgba(12, 18, 36, 0.72);
+  --bg: var(--cp-deep);
+  --bg-elevated: #0a1022;
+  --fg: #e6f1ff;
+  --fg-soft: #9cb3d6;
+  --muted: #5a6d8c;
+  --border: rgba(0, 240, 255, 0.18);
+  --accent: var(--cp-neon-cyan);
+  --accent-soft: rgba(0, 240, 255, 0.14);
+  --accent-hover: #7cf9ff;
+  background-color: var(--cp-deep);
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(255, 42, 109, 0.14), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 100% 50%, rgba(0, 240, 255, 0.08), transparent 45%),
+    radial-gradient(ellipse 70% 50% at 0% 80%, rgba(252, 238, 10, 0.05), transparent 40%),
+    linear-gradient(180deg, #070b18 0%, var(--cp-deep) 38%, #03060e 100%);
+  min-height: 100%;
+}
+
+html:has(body.page-home)::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.18) 2px,
+    rgba(0, 0, 0, 0.18) 3px
+  );
+  opacity: 0.35;
+  animation: cp-home-scan-drift 14s linear infinite;
+}
+
+html:has(body.page-home)::after {
+  content: '';
+  position: fixed;
+  inset: -80px;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, black 15%, transparent 72%);
+  animation: cp-home-grid-shift 22s linear infinite;
+}
+
+html:has(body.page-home) body {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+html:has(body.page-home) .wrap {
+  font-family: 'Rajdhani', 'Noto Sans SC', system-ui, sans-serif;
+  font-weight: 500;
+}
+
+html:has(body.page-home) .home-brand-heading {
+  letter-spacing: 0.06em;
+}
+
+html:has(body.page-home) .home-logo--match-fg,
+html:has(body.page-home) .toolbar-icon--match-fg {
+  filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(0, 240, 255, 0.65))
+    drop-shadow(0 0 22px rgba(255, 42, 109, 0.35)) !important;
+}
+
+html:has(body.page-home) .site-header {
+  margin-bottom: 2.15rem;
+  padding-bottom: 1rem;
+  border-bottom: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 240, 255, 0.06) 20%,
+    rgba(255, 42, 109, 0.05) 80%,
+    transparent
+  );
+  box-shadow:
+    0 1px 0 rgba(0, 240, 255, 0.35),
+    0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+html:has(body.page-home) .toolbar-btn {
+  color: rgba(0, 240, 255, 0.55);
+  border-radius: 2px;
+}
+
+html:has(body.page-home) .toolbar-btn:hover {
+  color: var(--cp-neon-cyan);
+  background: rgba(0, 240, 255, 0.08);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.25);
+}
+
+html:has(body.page-home) .post-list {
+  gap: 0.85rem;
+}
+
+html:has(body.page-home) .post-card {
+  padding: 0.72rem 0.85rem;
+  margin: 0 -0.85rem;
+  border-radius: 2px;
+  background: var(--cp-panel);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 240, 255, 0.16);
+  border-left: 3px solid var(--cp-neon-mag);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  animation: cp-home-edge-pulse 5.5s ease-in-out infinite;
+}
+
+html:has(body.page-home) .post-card-title {
+  font-family: 'Orbitron', 'Rajdhani', 'Noto Sans SC', sans-serif;
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--fg);
+  text-shadow:
+    0 0 1px rgba(0, 240, 255, 0.35),
+    0 0 24px rgba(0, 240, 255, 0.06);
+}
+
+html:has(body.page-home) .post-card-link:hover .post-card-title-text,
+html:has(body.page-home) .post-card-link.post-card-link--kbd-focus .post-card-title-text {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 40'%3E%3Cpath fill='none' stroke='%2300f0ff' stroke-width='2' stroke-linecap='square' d='M0 27 L96 27'/%3E%3C/svg%3E");
+  background-size: 4em auto;
+}
+
+html:has(body.page-home) .post-card-meta time {
+  color: rgba(0, 240, 255, 0.45);
+  opacity: 1;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.06em;
+}
+
+html:has(body.page-home) .post-card-line {
+  color: rgba(156, 179, 214, 0.82);
+  font-size: 0.84rem;
+}
+
+html:has(body.page-home) .post-card-draft {
+  color: var(--cp-deep);
+  background: linear-gradient(135deg, var(--cp-neon-amber), #ffe566);
+  border-radius: 1px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+}
+
+html:has(body.page-home) .post-card-line code {
+  font-family: var(--font-mono);
+  color: var(--cp-neon-amber);
+  background: rgba(0, 240, 255, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+}
+
+html:has(body.page-home) a {
+  color: var(--cp-neon-cyan);
+}
+
+html:has(body.page-home) a:hover {
+  color: #a8fcff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.45);
+}
+
+/** 高对比 / 强制配色：保持与默认主页相同的霓虹面板（不经系统改写） */
+@media (prefers-contrast: more) {
+  html:has(body.page-home) {
+    --fg: #e6f1ff;
+    --fg-soft: #9cb3d6;
+    --muted: #5a6d8c;
+    --border: rgba(0, 240, 255, 0.22);
+    --accent: #00f0ff;
+    --accent-hover: #7cf9ff;
+  }
+}
+
+@media (forced-colors: active) {
+  html:has(body.page-home),
+  html:has(body.page-home) .post-card,
+  html:has(body.page-home) .toolbar-btn {
+    forced-color-adjust: none;
+  }
 }
 

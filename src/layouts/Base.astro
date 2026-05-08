@@ -9,15 +9,13 @@ interface Props {
   description?: string;
   headerVariant?: 'home' | 'article';
   articleTitle?: string;
-  /** 主页 logo 旁一行小字，例如「最后更新于2026年5月7日」 */
-  homeLastUpdatedLine?: string;
   /** 根路径欢迎页：仅保留主题切换与正文区，无站点顶栏 */
   splash?: boolean;
 }
 
 const siteName = SITE_NAME;
 
-const { title, description, headerVariant = 'home', articleTitle, homeLastUpdatedLine, splash = false } = Astro.props;
+const { title, description, headerVariant = 'home', articleTitle, splash = false } = Astro.props;
 const pageTitle = title === siteName ? SITE_TAB_TITLE : `${title} · ${SITE_TAB_TITLE}`;
 const baseUrl = import.meta.env.BASE_URL;
 const scriptBase = (baseUrl || '/').replace(/\/?$/, '/');
@@ -25,7 +23,7 @@ const homeHref = getHomeHref(baseUrl);
 const homeLogoSrc = getPublicHref(baseUrl, 'images/homelogo.png');
 const iconSunSrc = getPublicHref(baseUrl, 'images/icon_sun.png');
 const iconMoonSrc = getPublicHref(baseUrl, 'images/icon_moon.png');
-const iconBackSrc = getPublicHref(baseUrl, 'images/icon_back.png');
+const postEditorHref = getPublicHref(baseUrl, 'tools/post-editor.html');
 const faviconBase = (baseUrl || '/').replace(/\/?$/, '/');
 /** public/favicon.png：在 macOS 上用 Apple Color Emoji 离线渲染的 📟（脚本 scripts/render-ios-favicon.swift） */
 const faviconHref = `${faviconBase}favicon.png`;
@@ -43,18 +41,28 @@ const isSplash = splash === true;
     <title>{pageTitle}</title>
     <link rel="icon" href={faviconHref} sizes="192x192" type="image/png" />
     <script is:inline>
-      try {
-        var _t = localStorage.getItem('theme');
-        if (_t !== 'light' && _t !== 'dark') _t = 'dark';
-        document.documentElement.dataset.theme = _t;
-      } catch (e) {
-        document.documentElement.dataset.theme = 'dark';
-      }
+      (function () {
+        /** ClientRouter：下一页 SSR 根节点带默认深色，swap 前从 localStorage 写入，避免浅色被覆盖 */
+        window.__blogApplyStoredTheme = function (doc) {
+          var d = doc || document;
+          try {
+            var _t = localStorage.getItem('theme');
+            if (_t !== 'light' && _t !== 'dark') _t = 'dark';
+            d.documentElement.dataset.theme = _t;
+          } catch (e) {
+            d.documentElement.dataset.theme = 'dark';
+          }
+        };
+        window.__blogApplyStoredTheme(document);
+        document.addEventListener('astro:before-swap', function (ev) {
+          window.__blogApplyStoredTheme(ev.newDocument);
+        });
+      })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600&family=Orbitron:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
     <ClientRouter />
@@ -85,70 +93,78 @@ const isSplash = splash === true;
               />
             </button>
           </div>
-        ) : (
-      <header class="site-header">
-        <div class="site-header-primary">
-          {
-            isHome ? (
+        ) : null
+      }
+      {
+        isSplash ? null : isHome ? (
+          <header class="site-header">
+            <div class="site-header-primary">
               <h1 class="home-brand-heading">
-                <span class="home-brand-cluster">
-                  <a class="home-logo-link" href={homeHref}>
-                    <img
-                      class="home-logo home-logo--match-fg"
-                      src={homeLogoSrc}
-                      alt={siteName}
-                      width={HOME_LOGO_INTRINSIC.width}
-                      height={HOME_LOGO_INTRINSIC.height}
-                      style={`aspect-ratio: ${HOME_LOGO_INTRINSIC.width} / ${HOME_LOGO_INTRINSIC.height}`}
-                      decoding="async"
-                      draggable={false}
-                    />
-                  </a>
-                  {
-                    homeLastUpdatedLine ? (
-                      <span class="home-last-updated">{homeLastUpdatedLine}</span>
-                    ) : null
-                  }
+                <span class="home-logo-wrap">
+                  <img
+                    class="home-logo home-logo--match-fg"
+                    src={homeLogoSrc}
+                    alt={siteName}
+                    width={HOME_LOGO_INTRINSIC.width}
+                    height={HOME_LOGO_INTRINSIC.height}
+                    style={`aspect-ratio: ${HOME_LOGO_INTRINSIC.width} / ${HOME_LOGO_INTRINSIC.height}`}
+                    decoding="async"
+                    draggable={false}
+                  />
                 </span>
               </h1>
-            ) : (
-              <a class="toolbar-btn home-btn" href={homeHref} aria-label={`返回${siteName}`}>
+            </div>
+            <div class="site-header-toolbar">
+              <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
                 <img
-                  class="toolbar-back-icon toolbar-icon--match-fg"
-                  src={iconBackSrc}
+                  class="theme-toggle-icon theme-toggle-icon--sun toolbar-icon--match-fg"
+                  src={iconSunSrc}
                   alt=""
-                  width="30"
-                  height="30"
+                  width="29"
+                  height="29"
                   decoding="async"
                   draggable={false}
                 />
-              </a>
-            )
-          }
-        </div>
-        <div class="site-header-toolbar">
-          <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
-            <img
-              class="theme-toggle-icon theme-toggle-icon--sun toolbar-icon--match-fg"
-              src={iconSunSrc}
-              alt=""
-              width="29"
-              height="29"
-              decoding="async"
-              draggable={false}
-            />
-            <img
-              class="theme-toggle-icon theme-toggle-icon--moon toolbar-icon--match-fg"
-              src={iconMoonSrc}
-              alt=""
-              width="29"
-              height="29"
-              decoding="async"
-              draggable={false}
-            />
-          </button>
-        </div>
-      </header>
+                <img
+                  class="theme-toggle-icon theme-toggle-icon--moon toolbar-icon--match-fg"
+                  src={iconMoonSrc}
+                  alt=""
+                  width="29"
+                  height="29"
+                  decoding="async"
+                  draggable={false}
+                />
+              </button>
+            </div>
+          </header>
+        ) : (
+          <header class="site-header">
+            <div class="site-header-primary">
+              <a class="article-home-crumb" href={homeHref}>返回主页</a>
+            </div>
+            <div class="site-header-toolbar">
+              <button type="button" class="toolbar-btn theme-toggle" aria-label="切换浅色或深色模式">
+                <img
+                  class="theme-toggle-icon theme-toggle-icon--sun toolbar-icon--match-fg"
+                  src={iconSunSrc}
+                  alt=""
+                  width="29"
+                  height="29"
+                  decoding="async"
+                  draggable={false}
+                />
+                <img
+                  class="theme-toggle-icon theme-toggle-icon--moon toolbar-icon--match-fg"
+                  src={iconMoonSrc}
+                  alt=""
+                  width="29"
+                  height="29"
+                  decoding="async"
+                  draggable={false}
+                />
+              </button>
+            </div>
+          </header>
         )
       }
       <div class="page-main">
@@ -167,7 +183,7 @@ const isSplash = splash === true;
     <script is:inline src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script is:inline src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
     <script is:inline src={`${scriptBase}js/enc-gate.js`}></script>
-    <!-- 晚于 head 中外链 CSS：在 prefers-reduced-motion 下仍播放本站动画，并盖过 Astro viewtransitions.css 的 animation:none（过渡样式见 global.css blog-vt-*） -->
+    <!-- 晚于 head 中外链 CSS：在 prefers-reduced-motion 下仍播放本站动画，并盖过 Astro viewtransitions.css 的 animation:none（过渡样式见 global.css blog-vt-*）；主页赛博背景动画同理 -->
     <style is:inline>
       @media (prefers-reduced-motion), (prefers-reduced-motion: reduce) {
         .page-main {
@@ -177,11 +193,17 @@ const isSplash = splash === true;
         body.page-welcome .page-main {
           animation-delay: 0.04s !important;
         }
-        .home-last-updated:not([data-intro-done]) {
-          animation: home-last-updated-dismiss 1.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-        }
         .enc-gate-shake-root.enc-gate-shake {
           animation: enc-gate-shake 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+        }
+        html:has(body.page-home)::before {
+          animation: cp-home-scan-drift 14s linear infinite !important;
+        }
+        html:has(body.page-home)::after {
+          animation: cp-home-grid-shift 22s linear infinite !important;
+        }
+        html:has(body.page-home) .post-card {
+          animation: cp-home-edge-pulse 5.5s ease-in-out infinite !important;
         }
         html[data-astro-transition-fallback='old'] [data-astro-transition-scope],
         html[data-astro-transition-fallback='old'][data-astro-transition-scope] {
@@ -201,27 +223,60 @@ const isSplash = splash === true;
         }
       }
     </style>
+    <script
+      is:inline
+      set:html={`window.__BLOG_POST_EDITOR_HREF=${JSON.stringify(postEditorHref)};`}
+    ></script>
     <script is:inline>
-      function bindHomeLastUpdatedIntroDone() {
-        document.querySelectorAll('.home-brand-cluster').forEach(function (cluster) {
-          if (cluster.dataset.homeIntroBind === '1') return;
-          cluster.dataset.homeIntroBind = '1';
-          var el = cluster.querySelector('.home-last-updated');
-          if (!el) return;
-          function markIntroDone() {
-            if (el.hasAttribute('data-intro-done')) return;
-            el.setAttribute('data-intro-done', '');
-          }
-          el.addEventListener('animationend', function (ev) {
-            if (ev.animationName !== 'home-last-updated-dismiss') return;
-            markIntroDone();
-          });
-          cluster.addEventListener('mouseenter', markIntroDone);
-          cluster.addEventListener('focusin', markIntroDone);
-        });
-      }
-      bindHomeLastUpdatedIntroDone();
-      document.addEventListener('astro:page-load', bindHomeLastUpdatedIntroDone);
+      /** 键盘聚焦标题链接时用手绘下划线（与 :hover 区分） */
+      document.addEventListener(
+        'focusin',
+        function (e) {
+          var t = e.target;
+          if (!t || !t.closest) return;
+          var a = t.closest('a.post-card-link');
+          if (a) a.classList.add('post-card-link--kbd-focus');
+        },
+        true,
+      );
+      document.addEventListener(
+        'focusout',
+        function (e) {
+          var t = e.target;
+          if (!t || !t.closest) return;
+          var a = t.closest('a.post-card-link');
+          if (a && (!e.relatedTarget || !a.contains(e.relatedTarget))) a.classList.remove('post-card-link--kbd-focus');
+        },
+        true,
+      );
+
+      document.addEventListener(
+        'focusin',
+        function (e) {
+          var t = e.target;
+          if (!t || !t.closest) return;
+          var a = t.closest('a.article-adjacent-link');
+          if (a) a.classList.add('article-adjacent-link--kbd-focus');
+        },
+        true,
+      );
+      document.addEventListener(
+        'focusout',
+        function (e) {
+          var t = e.target;
+          if (!t || !t.closest) return;
+          var a = t.closest('a.article-adjacent-link');
+          if (a && (!e.relatedTarget || !a.contains(e.relatedTarget))) a.classList.remove('article-adjacent-link--kbd-focus');
+        },
+        true,
+      );
+
+      document.addEventListener('astro:after-swap', function () {
+        if (window.__blogApplyStoredTheme) window.__blogApplyStoredTheme(document);
+      });
+      document.addEventListener('astro:page-load', function () {
+        if (window.__blogApplyStoredTheme) window.__blogApplyStoredTheme(document);
+      });
 
       document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest && e.target.closest('.theme-toggle');
@@ -247,6 +302,27 @@ const isSplash = splash === true;
         },
         true,
       );
+      (function () {
+        var href = window.__BLOG_POST_EDITOR_HREF;
+        if (typeof href !== 'string' || !href) return;
+        if (window.__blogPostEditorHotkeyBound) return;
+        window.__blogPostEditorHotkeyBound = true;
+        document.addEventListener(
+          'keydown',
+          function (e) {
+            if (e.defaultPrevented) return;
+            if (e.isComposing) return;
+            if (!e.altKey || e.metaKey || e.ctrlKey) return;
+            /** macOS Option+字母常把 e.key 变成 π 等，以 code 为准并兼容旧判断 */
+            if (e.code !== 'KeyP' && e.key !== 'p' && e.key !== 'P' && e.key !== 'π') return;
+            var el = e.target;
+            if (el && el.closest && el.closest('input, textarea, select, [contenteditable="true"]')) return;
+            e.preventDefault();
+            window.location.assign(href);
+          },
+          true,
+        );
+      })();
     </script>
   </body>
 </html>

@@ -2,16 +2,29 @@
 import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
 import { SITE_TAB_TITLE } from '../../site';
+import { getPostHref, getHomeHref } from '../../paths';
+import { compareHomePosts } from '../../lib/blog-list-order';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
-  return posts.map((post) => ({
-    params: { slug: post.id },
-    props: { post },
-  }));
+  const sorted = [...posts].sort(compareHomePosts);
+  return sorted.map((post, index) => {
+    const prevEntry = index > 0 ? sorted[index - 1] : null;
+    const nextEntry = index < sorted.length - 1 ? sorted[index + 1] : null;
+    return {
+      params: { slug: post.id },
+      props: {
+        post,
+        prevAdjacent: prevEntry ? { id: prevEntry.id, title: prevEntry.data.title } : null,
+        nextAdjacent: nextEntry ? { id: nextEntry.id, title: nextEntry.data.title } : null,
+      },
+    };
+  });
 }
 
-const { post } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL;
+const homeHref = getHomeHref(baseUrl);
+const { post, prevAdjacent, nextAdjacent } = Astro.props;
 const { Content } = await render(post);
 
 const enc =
@@ -79,4 +92,45 @@ const hint = enc ? (post.data.passwordHint ?? '').trim() : '';
       )
     }
   </article>
+  <footer class="article-doc-footer" aria-label="文末导航">
+    {
+      prevAdjacent || nextAdjacent ? (
+        <nav class="article-adjacent" aria-label="相邻文章">
+          <div class="article-adjacent-inner">
+            <div class="article-adjacent-cell article-adjacent-cell--prev">
+              {
+                prevAdjacent ? (
+                  <a class="article-adjacent-link" href={getPostHref(baseUrl, prevAdjacent.id)}>
+                    <span class="article-adjacent-label">上一篇</span>
+                    <span class="article-adjacent-title-shell">
+                      <span class="article-adjacent-title-text">{prevAdjacent.title}</span>
+                    </span>
+                  </a>
+                ) : (
+                  <span class="article-adjacent-empty" aria-hidden="true" />
+                )
+              }
+            </div>
+            <div class="article-adjacent-cell article-adjacent-cell--next">
+              {
+                nextAdjacent ? (
+                  <a class="article-adjacent-link" href={getPostHref(baseUrl, nextAdjacent.id)}>
+                    <span class="article-adjacent-label">下一篇</span>
+                    <span class="article-adjacent-title-shell">
+                      <span class="article-adjacent-title-text">{nextAdjacent.title}</span>
+                    </span>
+                  </a>
+                ) : (
+                  <span class="article-adjacent-empty" aria-hidden="true" />
+                )
+              }
+            </div>
+          </div>
+        </nav>
+      ) : null
+    }
+    <p class="article-foot-nav-home">
+      <a class="article-home-crumb" href={homeHref}>返回主页</a>
+    </p>
+  </footer>
 </Base>
