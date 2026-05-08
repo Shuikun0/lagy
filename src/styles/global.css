@@ -72,6 +72,10 @@ body {
   overscroll-behavior-y: none;
 }
 
+body.page-home {
+  background: #16a34a;
+}
+
 /**
  * ClientRouter：整页过渡仅用淡入淡出（无位移）；root 关掉过渡以免顶栏跟着闪。
  */
